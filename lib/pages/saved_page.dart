@@ -1,9 +1,9 @@
-// lib/pages/add_trip_page.dart
+// lib/pages/saved_page.dart
 import 'package:flutter/material.dart';
 import 'package:jelajahin_apps/main.dart'; // Import AppColors
 
-class AddTripPage extends StatelessWidget {
-  const AddTripPage({super.key});
+class SavedPage extends StatelessWidget {
+  const SavedPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,23 +13,17 @@ class AddTripPage extends StatelessWidget {
         backgroundColor: AppColors.white,
         elevation: 0,
         title: Text(
-          'Create New Trip',
+          'Saved Trips',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.primaryDark,
           ),
         ),
         centerTitle: true,
-        // Jika halaman ini seharusnya bisa ditutup (misal, dibuka sebagai dialog)
-        // maka IconButton ini relevan. Jika dibuka sebagai tab utama, mungkin tidak.
-        leading: IconButton(
-          icon: Icon(Icons.close, color: AppColors.primaryDark),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
       body: Center(
         child: Text(
-          "Form to add a new trip goes here.",
+          "Content for Saved Trips will go here.",
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: AppColors.primaryDark,
             fontWeight: FontWeight.bold,
