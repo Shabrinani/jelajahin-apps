@@ -9,7 +9,7 @@ import 'package:jelajahin_apps/pages/bottom_nav_bar.dart';
 import 'package:jelajahin_apps/pages/home_page.dart';
 import 'package:jelajahin_apps/pages/saved_page.dart';
 import 'package:jelajahin_apps/pages/notification_page.dart';
-import 'package:jelajahin_apps/pages/add_page.dart';
+import 'package:jelajahin_apps/pages/Add_destination.dart';
 import 'package:jelajahin_apps/pages/profile_page.dart';
 
 
@@ -28,7 +28,7 @@ class _HomeState extends State<Home> {
   final List<Widget> _pages = [
     const HomeContentPage(),      // Konten Home
     const SavedPage(),            // Konten Saved
-    const AddTripPage(),          // Konten Add Trip
+    const AddDestinationScreen(), // Konten Add Trip
     const NotificationPage(),     // Konten Notification
     const ProfilePage(),          // Konten Profile
   ];
@@ -54,7 +54,7 @@ class _HomeState extends State<Home> {
         context: context,
         isScrollControlled: true, // Untuk full screen modal jika form panjang
         builder: (context) {
-          return const AddTripPage(); // Tampilkan halaman AddTripPage sebagai modal
+          return const AddDestinationScreen(); // Tampilkan halaman AddTripPage sebagai modal
         },
       );
       // Jangan ubah _selectedIndex agar tab sebelumnya tetap aktif

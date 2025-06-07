@@ -14,23 +14,23 @@ class CustomBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed, // Ensures all items are equally spaced
+      type: BottomNavigationBarType.fixed,
       backgroundColor: AppColors.white,
-      selectedItemColor: AppColors.lightTeal, // Color for active icon
-      unselectedItemColor: Colors.grey[400], // Color for inactive icons
+      selectedItemColor: AppColors.lightTeal,
+      unselectedItemColor: Colors.grey[400],
       showSelectedLabels: true,
-      showUnselectedLabels: false, // Only show label for selected item
+      showUnselectedLabels: false,
       currentIndex: selectedIndex,
       onTap: onItemTapped,
       items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined), // Outline icon for inactive
-          activeIcon: Icon(Icons.home), // Filled icon for active
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home),
           label: 'Home',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.bookmark_border), // Outline icon for inactive
-          activeIcon: Icon(Icons.bookmark), // Filled icon for active
+          icon: Icon(Icons.bookmark_border),
+          activeIcon: Icon(Icons.bookmark),
           label: 'Saved',
         ),
         BottomNavigationBarItem(
@@ -39,16 +39,16 @@ class CustomBottomNavBar extends StatelessWidget {
             backgroundColor: AppColors.darkTeal,
             child: Icon(Icons.add, color: AppColors.white, size: 30),
           ),
-          label: '', // Empty label for the central add button
+          label: '',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.notifications_none), // Outline icon for inactive
-          activeIcon: Icon(Icons.notifications), // Filled icon for active
+          icon: Icon(Icons.notifications_none),
+          activeIcon: Icon(Icons.notifications),
           label: 'Notification',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline), // Outline icon for inactive
-          activeIcon: Icon(Icons.person), // Filled icon for active
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
           label: 'Profile',
         ),
       ],

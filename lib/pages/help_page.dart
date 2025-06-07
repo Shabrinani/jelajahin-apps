@@ -131,7 +131,7 @@ class HelpPage extends StatelessWidget {
                   ),
                 ],
               );
-            }).toList(),
+            }),
             const SizedBox(height: 20),
             // Bottom navigation bar (jika ini adalah bagian dari Home yang memiliki bottom nav bar)
             // Saya sertakan lagi, tapi ingat ini perlu dikelola di parent widget.

@@ -6,7 +6,7 @@ import 'package:jelajahin_apps/main.dart'; // Import main.dart untuk mengakses A
 // karena kita akan mengandalkan pengaturan tema di main.dart.
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
