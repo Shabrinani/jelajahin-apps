@@ -4,6 +4,7 @@ import 'package:jelajahin_apps/main.dart'; // Import AppColors
 import 'package:jelajahin_apps/pages/login.dart'; // Untuk navigasi setelah logout
 import 'package:jelajahin_apps/pages/edit_profile.dart'; // Halaman Edit Profil (akan disesuaikan juga)
 import 'package:jelajahin_apps/pages/help_page.dart';    // Halaman Bantuan/FAQ (akan disesuaikan juga)
+import 'package:jelajahin_apps/pages/settings.dart'; // Halaman Setting
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -33,11 +34,11 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       await FirebaseAuth.instance.signOut();
       // Setelah logout, arahkan ke halaman login dan hapus semua rute sebelumnya
-      if (mounted) { // Pastikan widget masih ada sebelum navigasi
+      if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const LoginPage()),
-          (Route<dynamic> route) => false, // Hapus semua rute sebelumnya
+          (Route<dynamic> route) => false,
         );
       }
     } catch (e) {
@@ -57,18 +58,18 @@ class _ProfilePageState extends State<ProfilePage> {
     final TextTheme textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: AppColors.white, // Background putih sesuai UI
+      backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.white, // AppBar putih
-        elevation: 0, // Tanpa shadow
+        backgroundColor: AppColors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.primaryDark), // Panah kembali
+          icon: Icon(Icons.arrow_back, color: AppColors.primaryDark),
           onPressed: () {
-            Navigator.pop(context); // Kembali ke halaman sebelumnya
+            Navigator.pop(context);
           },
         ),
         title: Text(
-          'Profile', // Judul "Profile"
+          'Profile',
           style: textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.primaryDark,
@@ -77,24 +78,24 @@ class _ProfilePageState extends State<ProfilePage> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0), // Padding disesuaikan
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Bagian Foto Profil
+            // Foto Profil
             Stack(
               alignment: Alignment.bottomRight,
               children: [
                 CircleAvatar(
-                  radius: 60, // Ukuran sesuai UI
-                  backgroundColor: AppColors.lightTeal.withOpacity(0.2), // Warna background avatar
+                  radius: 60,
+                  backgroundColor: AppColors.lightTeal.withOpacity(0.2),
                   backgroundImage: _currentUser?.photoURL != null
                       ? NetworkImage(_currentUser!.photoURL!)
-                      : null, // Tampilkan foto profil jika ada
+                      : null,
                   child: _currentUser?.photoURL == null
                       ? Icon(
                           Icons.person,
-                          size: 60, // Ukuran ikon default
+                          size: 60,
                           color: AppColors.darkTeal,
                         )
                       : null,
@@ -104,15 +105,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   right: 0,
                   child: GestureDetector(
                     onTap: () {
-                      // TODO: Implementasi ganti foto profil
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const EditProfilePage()),
                       );
                     },
                     child: CircleAvatar(
-                      radius: 18, // Ukuran ikon edit
-                      backgroundColor: AppColors.darkTeal, // Warna icon edit
+                      radius: 18,
+                      backgroundColor: AppColors.darkTeal,
                       child: Icon(Icons.edit, color: AppColors.white, size: 18),
                     ),
                   ),
@@ -121,9 +121,9 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 15),
 
-            // Nama Pengguna
+            // Nama
             Text(
-              _currentUser?.displayName ?? 'Your Name Here', // Nama pengguna
+              _currentUser?.displayName ?? 'Your Name Here',
               style: textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppColors.primaryDark,
@@ -131,31 +131,30 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 5),
 
-            // Role/Profesi (jika ada, atau bisa diganti email)
+            // Role
             Text(
-              // _currentUser?.email ?? 'UI UX Designer', // Jika ingin menampilkan email
-              'UI UX Designer', // Contoh role/profesi sesuai UI
+              'UI UX Designer',
               style: textTheme.bodyLarge?.copyWith(
                 color: Colors.grey[600],
               ),
             ),
             const SizedBox(height: 30),
 
-            // Opsi Profil
+            // Menu
             _buildProfileOption(
               context,
               icon: Icons.settings,
               title: 'Settings',
               onTap: () {
-                // Navigasi ke halaman pengaturan (belum ada, bisa dibuat nanti)
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Halaman Pengaturan akan segera hadir!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingPage()),
                 );
               },
             ),
             _buildProfileOption(
               context,
-              icon: Icons.info_outline, // Ikon info
+              icon: Icons.info_outline,
               title: 'Help',
               onTap: () {
                 Navigator.push(
@@ -166,10 +165,9 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             _buildProfileOption(
               context,
-              icon: Icons.call, // Ikon telepon/kontak
+              icon: Icons.call,
               title: 'Feedback & Support',
               onTap: () {
-                // TODO: Navigasi ke halaman Feedback & Support atau email client
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Kirim Feedback Anda akan segera hadir!')),
                 );
@@ -177,42 +175,40 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             _buildProfileOption(
               context,
-              icon: Icons.logout, // Ikon logout
+              icon: Icons.logout,
               title: 'Log Out',
-              onTap: _logout, // Panggil fungsi logout
-              isLogout: true, // Beri tanda bahwa ini opsi logout
+              onTap: _logout,
+              isLogout: true,
             ),
             const SizedBox(height: 20),
-            // Bottom navigation bar akan berada di parent widget (Home)
-
           ],
         ),
       ),
     );
   }
 
-  // Helper Widget untuk setiap opsi profil, disesuaikan dengan UI baru
+  // Widget Opsi
   Widget _buildProfileOption(
     BuildContext context, {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
-    bool isLogout = false, // Parameter baru untuk styling logout
+    bool isLogout = false,
   }) {
     final TextTheme textTheme = Theme.of(context).textTheme;
     return Column(
       children: [
         ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 0), // Hapus padding default ListTile
+          contentPadding: const EdgeInsets.symmetric(horizontal: 0),
           leading: Icon(
             icon,
-            color: isLogout ? Colors.red : AppColors.darkTeal, // Warna ikon logout merah
+            color: isLogout ? Colors.red : AppColors.darkTeal,
             size: 28,
           ),
           title: Text(
             title,
             style: textTheme.titleMedium?.copyWith(
-              color: isLogout ? Colors.red : AppColors.primaryDark, // Warna teks logout merah
+              color: isLogout ? Colors.red : AppColors.primaryDark,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -225,8 +221,8 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         Divider(
           height: 1,
-          color: Colors.grey[200], // Garis pemisah antar opsi
-          indent: 44, // Indentasi agar sejajar dengan teks
+          color: Colors.grey[200],
+          indent: 44,
         ),
       ],
     );
