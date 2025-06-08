@@ -15,10 +15,6 @@ class HelpPage extends StatelessWidget {
         'question': 'How do I password protect my account?',
         'answer': 'You can set up a strong password during registration. To change or update your password, go to the "Edit Profile" section in your Profile settings and look for the password reset option.',
       },
-      {
-        'question': 'How do I set up my Trip App?', // Pertanyaan duplikat di UI, tapi disertakan sesuai permintaan
-        'answer': 'Please refer to the first question for the setup process. If you encounter specific issues, contact support.',
-      },
     ],
     'Connecting Co-parent & Creating a circle': [ // Kategori 2
       {
@@ -133,52 +129,6 @@ class HelpPage extends StatelessWidget {
               );
             }),
             const SizedBox(height: 20),
-            // Bottom navigation bar (jika ini adalah bagian dari Home yang memiliki bottom nav bar)
-            // Saya sertakan lagi, tapi ingat ini perlu dikelola di parent widget.
-            BottomNavigationBar(
-              type: BottomNavigationBarType.fixed, // Fixed type agar semua item terlihat
-              backgroundColor: AppColors.white,
-              selectedItemColor: AppColors.lightTeal, // Warna icon aktif
-              unselectedItemColor: Colors.grey[400], // Warna icon tidak aktif
-              showSelectedLabels: true,
-              showUnselectedLabels: false, // Label hanya tampil di yang terpilih
-              currentIndex: 0, // Index default, sesuaikan jika Help Page adalah bagian dari tab
-              onTap: (index) {
-                // TODO: Handle navigation to different tabs if this is part of Home
-                // If this page is a standalone route, this BottomNavBar might not be needed
-                // or needs to be managed by the parent Navigator (e.g., Home page)
-              },
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home_outlined),
-                  activeIcon: Icon(Icons.home),
-                  label: 'Home',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.bookmark_border),
-                  activeIcon: Icon(Icons.bookmark),
-                  label: 'Saved',
-                ),
-                BottomNavigationBarItem(
-                  icon: CircleAvatar(
-                    radius: 25,
-                    backgroundColor: AppColors.darkTeal,
-                    child: Icon(Icons.add, color: AppColors.white, size: 30),
-                  ),
-                  label: '', // Label kosong untuk tombol tambah
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.notifications_none),
-                  activeIcon: Icon(Icons.notifications),
-                  label: 'Notification',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline),
-                  activeIcon: Icon(Icons.person),
-                  label: 'Profile',
-                ),
-              ],
-            ),
           ],
         ),
       ),

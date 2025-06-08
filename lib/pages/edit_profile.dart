@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:jelajahin_apps/main.dart'; // Import AppColors
+import 'dart:developer' as developer; // Import for developer.log
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -11,15 +13,27 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _fullNameController = TextEditingController(); // Untuk Nama Lengkap
+  final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController(); // Untuk Nomor Telepon
-  final TextEditingController _birthDateDayController = TextEditingController();
-  final TextEditingController _birthDateMonthController = TextEditingController();
-  final TextEditingController _birthDateYearController = TextEditingController();
+  // final TextEditingController _phoneController = TextEditingController(); // <<< DIHAPUS
 
   User? _currentUser;
   bool _isLoading = false;
+
+  String? _selectedAvatarUrl; // Untuk menyimpan path avatar yang dipilih
+
+  final List<String> _availableAvatars = [
+    'assets/profile_avatars/avatar1.png',
+    'assets/profile_avatars/avatar2.png',
+    'assets/profile_avatars/avatar3.png',
+    'assets/profile_avatars/avatar4.png',
+    'assets/profile_avatars/avatar5.png',
+    'assets/profile_avatars/avatar6.png',
+    'assets/profile_avatars/avatar7.png',
+    'assets/profile_avatars/avatar8.png',
+    'assets/profile_avatars/avatar9.png',
+    'assets/profile_avatars/avatar10.png',
+  ];
 
   @override
   void initState() {
@@ -28,10 +42,67 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (_currentUser != null) {
       _fullNameController.text = _currentUser!.displayName ?? '';
       _emailController.text = _currentUser!.email ?? '';
-      _phoneController.text = '+8801763204103'; // Placeholder
-      _birthDateDayController.text = '07'; // Placeholder
-      _birthDateMonthController.text = 'March'; // Placeholder
-      _birthDateYearController.text = '2002'; // Placeholder
+
+      // Muat data pengguna dari Firestore saat initState
+      _loadUserData();
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    if (_currentUser == null) {
+      developer.log('WARNING: _loadUserData called but _currentUser is null.');
+      return;
+    }
+
+    try {
+      developer.log('Attempting to load user data for UID: ${_currentUser!.uid}');
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+
+      if (userDoc.exists) {
+        // Data ditemukan di Firestore
+        setState(() {
+          _selectedAvatarUrl = userDoc.get('avatarUrl') as String?;
+          // _phoneController.text = userDoc.get('phoneNumber') as String? ?? ''; // <<< DIHAPUS
+
+          if (_selectedAvatarUrl == null || _selectedAvatarUrl!.isEmpty) { // Tambah check .isEmpty
+            developer.log('Firestore: avatarUrl is null or empty, using default first avatar.'); // Update log
+            _selectedAvatarUrl = _availableAvatars.first;
+          } else {
+            developer.log('Firestore: Avatar URL loaded: $_selectedAvatarUrl');
+            // Tambahkan validasi jika URL dari Firestore tidak ada di daftar _availableAvatars
+            if (!_availableAvatars.contains(_selectedAvatarUrl)) {
+              developer.log('WARNING: Loaded avatar URL "$_selectedAvatarUrl" is not in _availableAvatars list. Using default.');
+              _selectedAvatarUrl = _availableAvatars.first;
+            }
+          }
+          developer.log('Final _selectedAvatarUrl after loading: $_selectedAvatarUrl');
+          // developer.log('Phone number loaded: ${_phoneController.text}'); // <<< DIHAPUS
+        });
+      } else {
+        // Dokumen pengguna tidak ada di Firestore, atur avatar default
+        developer.log('User document does not exist for UID: ${_currentUser!.uid}. Setting default avatar.');
+        setState(() {
+          _selectedAvatarUrl = _availableAvatars.first; // Atur ke avatar pertama sebagai default
+        });
+      }
+    } catch (e, stackTrace) {
+      developer.log("ERROR: Failed to load user data from Firestore: $e", error: e, stackTrace: stackTrace);
+      // Opsional: Tampilkan SnackBar kepada pengguna jika gagal memuat data
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load profile data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      // Atur avatar default sebagai fallback bahkan jika ada error loading
+      setState(() {
+        _selectedAvatarUrl = _availableAvatars.first;
+      });
     }
   }
 
@@ -39,10 +110,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
-    _birthDateDayController.dispose();
-    _birthDateMonthController.dispose();
-    _birthDateYearController.dispose();
+    // _phoneController.dispose(); // <<< DIHAPUS
     super.dispose();
   }
 
@@ -57,29 +125,36 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     try {
       if (_currentUser != null) {
-        // Update display name (Nama Lengkap)
-        if (_fullNameController.text.trim() != _currentUser!.displayName) {
+        // 1. Update display name di Firebase Authentication
+        if (_fullNameController.text.trim() != (_currentUser!.displayName ?? '')) {
           await _currentUser!.updateDisplayName(_fullNameController.text.trim());
+          developer.log('Firebase Auth display name updated.'); // LOGGING
         }
 
-        // TODO: Update nomor telepon dan tanggal lahir ke database Anda
-        // Perlu diingat: updateEmail() di Firebase memerlukan re-authentication
-        // dan tidak bisa dilakukan langsung dari sini tanpa logic tambahan.
-        // Untuk data seperti nomor telepon dan tanggal lahir, Anda perlu
-        // menyimpannya di Firestore atau Realtime Database yang terkait dengan UID pengguna.
+        // 2. Update data tambahan (avatar URL) di Cloud Firestore
+        // Catatan: 'phoneNumber' dihapus dari sini juga.
+        await FirebaseFirestore.instance.collection('users').doc(_currentUser!.uid).set({
+          // 'phoneNumber': _phoneController.text.trim(), // <<< DIHAPUS
+          'avatarUrl': _selectedAvatarUrl, // Simpan URL avatar yang dipilih
+          'lastUpdated': FieldValue.serverTimestamp(), // Tambahkan timestamp
+        }, SetOptions(merge: true)); // Gunakan merge agar tidak menimpa field lain
+        developer.log('Firestore user data updated. Avatar URL saved: $_selectedAvatarUrl'); // LOGGING
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Profil berhasil diperbarui!'),
+              content: const Text('Profil berhasil diperbarui!'),
               backgroundColor: AppColors.lightTeal,
             ),
           );
           Navigator.pop(context); // Kembali ke halaman profil
         }
+      } else {
+        developer.log('Current user is null, cannot update profile.'); // LOGGING
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Gagal memperbarui profil: ${e.message}';
+      developer.log('FirebaseAuthException: $errorMessage'); // LOGGING
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -89,6 +164,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         );
       }
     } catch (e) {
+      developer.log('Unexpected error updating profile: $e'); // LOGGING
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -106,9 +182,107 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  // Fungsi untuk menampilkan Bottom Sheet pilihan avatar
+  void _showAvatarSelectionBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Pilih Avatar',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: _availableAvatars.length,
+                  itemBuilder: (context, index) {
+                    final avatarPath = _availableAvatars[index];
+                    final isSelected = _selectedAvatarUrl == avatarPath;
+                    developer.log('Attempting to load avatar: $avatarPath'); // LOGGING
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedAvatarUrl = avatarPath;
+                        });
+                        developer.log('Selected avatar: $_selectedAvatarUrl'); // LOGGING
+                        Navigator.pop(context); // Tutup bottom sheet setelah memilih
+                      },
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Colors.grey[200],
+                            backgroundImage: AssetImage(avatarPath),
+                            // Anda bisa menambahkan errorBuilder jika ingin melihat error langsung di UI
+                            // onImageError: (exception, stackTrace) {
+                            //   developer.log('Failed to load asset $avatarPath: $exception');
+                            // },
+                          ),
+                          if (isSelected)
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundColor: AppColors.darkTeal.withOpacity(0.5),
+                              child: Icon(Icons.check_circle, color: AppColors.white, size: 30),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: AppColors.primaryDark),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
+
+    // Menentukan gambar avatar yang akan ditampilkan di halaman edit
+    ImageProvider? currentAvatarImage;
+    if (_selectedAvatarUrl != null) {
+      currentAvatarImage = AssetImage(_selectedAvatarUrl!);
+      developer.log('Current profile avatar being used: $_selectedAvatarUrl'); // LOGGING
+    } else if (_currentUser?.photoURL != null) {
+      currentAvatarImage = NetworkImage(_currentUser!.photoURL!);
+      developer.log('Current profile avatar using Firebase Auth photoURL: ${_currentUser!.photoURL!}'); // LOGGING
+    } else {
+      developer.log('No specific avatar selected, using default person icon.'); // LOGGING
+    }
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -144,10 +318,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         CircleAvatar(
                           radius: 60,
                           backgroundColor: AppColors.lightTeal.withOpacity(0.2),
-                          backgroundImage: _currentUser?.photoURL != null
-                              ? NetworkImage(_currentUser!.photoURL!)
-                              : null,
-                          child: _currentUser?.photoURL == null
+                          backgroundImage: currentAvatarImage, // Gunakan yang sudah ditentukan
+                          child: currentAvatarImage == null
                               ? Icon(
                                   Icons.person,
                                   size: 60,
@@ -159,16 +331,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           bottom: 0,
                           right: 0,
                           child: GestureDetector(
-                            onTap: () {
-                              // TODO: Implementasi ganti foto profil
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Fitur ganti foto profil akan segera hadir!')),
-                              );
-                            },
+                            onTap: _showAvatarSelectionBottomSheet, // Panggil fungsi ini
                             child: CircleAvatar(
                               radius: 18,
                               backgroundColor: AppColors.darkTeal,
-                              child: Icon(Icons.camera_alt, color: AppColors.white, size: 18), // Ikon kamera
+                              child: Icon(Icons.camera_alt, color: AppColors.white, size: 18),
                             ),
                           ),
                         ),
@@ -176,7 +343,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                     const SizedBox(height: 15),
 
-                    // Nama Pengguna
+                    // Nama Pengguna (Display Only)
                     Text(
                       _currentUser?.displayName ?? 'Your Name Here',
                       style: textTheme.headlineMedium?.copyWith(
@@ -185,15 +352,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                     ),
                     const SizedBox(height: 5),
-
-                    // Role/Profesi
-                    Text(
-                      'UI UX Designer', // Contoh role/profesi sesuai UI
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 30),
 
                     // Form Fields
                     _buildInputField(
@@ -208,149 +366,53 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     _buildInputField(
                       context,
                       controller: _emailController,
-                      label: 'Email Adress',
+                      label: 'Email Address',
                       hintText: 'hallo@fillo.com',
                       icon: Icons.mail_outline,
-                      readOnly: true, // Email biasanya read-only untuk mencegah perubahan tanpa re-auth
+                      readOnly: true, // Email biasanya read-only
                     ),
-                    const SizedBox(height: 20),
-                    _buildInputField(
-                      context,
-                      controller: _phoneController,
-                      label: 'Phone Number',
-                      hintText: '+8801763204103',
-                      icon: Icons.call,
-                      keyboardType: TextInputType.phone,
-                      readOnly: false,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Birth Date
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Birth Date',
-                        style: textTheme.labelLarge?.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryDark,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildDateInputField(
-                            context,
-                            controller: _birthDateDayController,
-                            hintText: '07',
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildDateInputField(
-                            context,
-                            controller: _birthDateMonthController,
-                            hintText: 'March',
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildDateInputField(
-                            context,
-                            controller: _birthDateYearController,
-                            hintText: '2002',
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                      ],
-                    ),
+                    // const SizedBox(height: 20), // <<< DIHAPUS
+                    // _buildInputField( // <<< DIHAPUS
+                    //   context,
+                    //   controller: _phoneController,
+                    //   label: 'Phone Number',
+                    //   hintText: '+8801763204103',
+                    //   icon: Icons.call,
+                    //   keyboardType: TextInputType.phone,
+                    //   readOnly: false,
+                    // ),
                     const SizedBox(height: 40),
 
-                    // Save Button (Jika ada tombol save di desain)
-                    // Mengacu pada desain profil yang tidak ada tombol save eksplisit
-                    // saya asumsikan Save dilakukan di parent widget atau tidak diperlukan lagi.
-                    // Namun jika ingin ada, bisa seperti ini:
-                    // SizedBox(
-                    //   width: double.infinity,
-                    //   height: 50,
-                    //   child: ElevatedButton(
-                    //     onPressed: _updateProfile,
-                    //     style: ElevatedButton.styleFrom(
-                    //       backgroundColor: AppColors.primaryDark,
-                    //       foregroundColor: AppColors.white,
-                    //       shape: RoundedRectangleBorder(
-                    //         borderRadius: BorderRadius.circular(10),
-                    //       ),
-                    //       elevation: 0,
-                    //     ),
-                    //     child: Text(
-                    //       "Save Changes",
-                    //       style: textTheme.labelLarge?.copyWith(
-                    //         fontSize: 18,
-                    //         fontWeight: FontWeight.bold,
-                    //         color: AppColors.white,
-                    //       ),
-                    //     ),
-                    //   ),
-                    // ),
+                    // Save Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _updateProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryDark,
+                          foregroundColor: AppColors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _isLoading
+                            ? CircularProgressIndicator(color: AppColors.white)
+                            : Text(
+                                "Save Changes",
+                                style: textTheme.labelLarge?.copyWith(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.white,
+                                ),
+                              ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-      // Bottom navigation bar (jika ini adalah bagian dari Home yang memiliki bottom nav bar)
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Fixed type agar semua item terlihat
-        backgroundColor: AppColors.white,
-        selectedItemColor: AppColors.lightTeal, // Warna icon aktif
-        unselectedItemColor: Colors.grey[400], // Warna icon tidak aktif
-        showSelectedLabels: true,
-        showUnselectedLabels: false, // Label hanya tampil di yang terpilih
-        currentIndex: 4, // Index Profile tab
-        onTap: (index) {
-          // TODO: Handle navigation to different tabs if this is part of Home
-          // If this page is a standalone route, this BottomNavBar might not be needed
-          // or needs to be managed by the parent Navigator (e.g., Home page)
-          if (index == 0) {
-            // Navigate to Home
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Text('Home Page Placeholder')));
-          } else if (index == 4) {
-            // Already on Profile page (or navigating to Profile itself if it's the target)
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark_border),
-            activeIcon: Icon(Icons.bookmark),
-            label: 'Saved',
-          ),
-          BottomNavigationBarItem(
-            icon: CircleAvatar(
-              radius: 25,
-              backgroundColor: AppColors.darkTeal,
-              child: Icon(Icons.add, color: AppColors.white, size: 30),
-            ),
-            label: '', // Label kosong untuk tombol tambah
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_none),
-            activeIcon: Icon(Icons.notifications),
-            label: 'Notification',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
     );
   }
 
@@ -383,16 +445,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hintText,
-            prefixIcon: Icon(icon, color: Colors.grey[600]), // Ikon di dalam TextField
+            prefixIcon: Icon(icon, color: Colors.grey[600]),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), // Radius border sesuai UI
-              borderSide: BorderSide.none, // Tanpa border outline yang terlihat
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
             ),
             filled: true,
-            fillColor: Colors.grey[100], // Warna fill sesuai UI
+            fillColor: Colors.grey[100],
             contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
           ),
           validator: (value) {
+            // Validator hanya berlaku jika field tidak readOnly.
+            // Untuk email, Anda bisa menambahkan validator khusus email jika diperlukan.
             if (!readOnly && (value == null || value.isEmpty)) {
               return '$label tidak boleh kosong';
             }
@@ -400,46 +464,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
           },
         ),
       ],
-    );
-  }
-
-  // Helper Widget untuk input tanggal lahir (tanpa ikon di dalamnya)
-  Widget _buildDateInputField(
-    BuildContext context, {
-    required TextEditingController controller,
-    required String hintText,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return TextFormField(
-      controller: controller,
-      readOnly: true, // Biasanya dipilih dari DatePicker
-      keyboardType: keyboardType,
-      textAlign: TextAlign.center, // Teks di tengah
-      decoration: InputDecoration(
-        hintText: hintText,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.grey[100],
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8), // Padding lebih kecil
-      ),
-      onTap: () async {
-        // TODO: Implementasi DatePicker jika ingin dinamis
-        // Contoh:
-        // DateTime? pickedDate = await showDatePicker(
-        //   context: context,
-        //   initialDate: DateTime.now(),
-        //   firstDate: DateTime(1900),
-        //   lastDate: DateTime.now(),
-        // );
-        // if (pickedDate != null) {
-        //   controller.text = DateFormat('dd').format(pickedDate); // Contoh format
-        //   _birthDateMonthController.text = DateFormat('MMMM').format(pickedDate);
-        //   _birthDateYearController.text = DateFormat('yyyy').format(pickedDate);
-        // }
-      },
     );
   }
 }
