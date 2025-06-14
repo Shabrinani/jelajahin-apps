@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jelajahin_apps/main.dart'; // Untuk AppColors dan themeNotifier
 import 'package:jelajahin_apps/pages/notification_page.dart'; // Pastikan path sesuai
+import 'package:jelajahin_apps/pages/help_page.dart'; // Import HelpPage yang baru ditambahkan
+import 'package:firebase_auth/firebase_auth.dart'; // Untuk fungsi logout
+import 'package:jelajahin_apps/pages/login.dart'; // Untuk navigasi ke LoginPage setelah logout
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -48,6 +51,30 @@ class _SettingPageState extends State<SettingPage> {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  // Fungsi logout yang dipindahkan/direplikasi ke SettingPage
+  Future<void> _logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        // Hapus semua rute dan navigasi ke LoginPage
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal logout: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -113,6 +140,18 @@ class _SettingPageState extends State<SettingPage> {
             },
           ),
 
+          _buildSectionTitle("Bantuan & Dukungan"), // Section baru untuk Bantuan
+          _buildNavigationTile(
+            icon: Icons.help_outline,
+            title: "Bantuan",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HelpPage()), // Navigasi ke HelpPage
+              );
+            },
+          ),
+
           _buildSectionTitle("Tentang"),
           _buildNavigationTile(
             icon: Icons.info_outline,
@@ -125,6 +164,17 @@ class _SettingPageState extends State<SettingPage> {
                 applicationLegalese: '© 2025 Jelajahin Inc.',
               );
             },
+          ),
+          
+          // Opsi Logout di bagian paling bawah
+          const SizedBox(height: 30), // Memberi jarak dari section di atasnya
+          _buildNavigationTile(
+            icon: Icons.logout,
+            title: "Log Out",
+            onTap: _logout,
+            // Anda bisa tambahkan warna merah jika diinginkan, tapi defaultnya sudah cukup jelas
+            // trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.red), // Contoh
+            // iconColor: Colors.red, // Ini membutuhkan penyesuaian di _buildNavigationTile jika ingin passing color
           ),
         ],
       ),
@@ -168,14 +218,18 @@ class _SettingPageState extends State<SettingPage> {
     required String title,
     String? subtitle,
     required VoidCallback onTap,
+    // Tambahkan parameter iconColor jika ingin bisa custom warna ikon untuk logout
+    // Color? iconColor,
   }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary), // Gunakan iconColor jika ditambahkan
       title: Text(
         title,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w500,
+              // Jika ingin teks logout merah:
+              // color: title == "Log Out" ? Colors.red : null,
             ),
       ),
       subtitle: subtitle != null ? Text(subtitle) : null,
@@ -184,3 +238,4 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 }
+

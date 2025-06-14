@@ -1,7 +1,8 @@
 // lib/pages/search_screen.dart
 import 'package:flutter/material.dart';
-import 'package:jelajahin_apps/main.dart';
-import 'package:jelajahin_apps/pages/destination_detail_page.dart' as DetailPage;
+import 'package:jelajahin_apps/main.dart'; // For AppColors
+import 'package:jelajahin_apps/pages/destination_detail_page.dart';
+import 'package:jelajahin_apps/widgets/post_card.dart'; // Import PostCard
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -12,43 +13,106 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
-  bool isSearching = false;
+  bool isSearching = false; 
 
-  final List<Map<String, dynamic>> categories = [
-    {'name': 'All', 'icon': Icons.explore, 'count': '1.2k'},
-    {'name': 'Beaches', 'icon': Icons.beach_access, 'count': '256'},
-    {'name': 'Mountains', 'icon': Icons.landscape, 'count': '189'},
-    {'name': 'Cities', 'icon': Icons.location_city, 'count': '324'},
-    {'name': 'Restaurants', 'icon': Icons.restaurant, 'count': '567'},
-    {'name': 'Museums', 'icon': Icons.museum, 'count': '123'},
+  // Master list of all searchable posts (dummy data)
+  final List<Map<String, dynamic>> _allSearchablePosts = [
+    {
+      "id": "search_post_1",
+      "name": "Pantai Indah",
+      "location": "Bali, Indonesia",
+      "description": "Pantai dengan pasir putih dan air jernih.",
+      "image": "https://picsum.photos/seed/searchbeach1/400/250",
+      "reviews": 120, "commentsCount": 35,
+      "ownerName": "Wisatawan A", "ownerAvatar": "https://picsum.photos/seed/ava1/50/50"
+    },
+    {
+      "id": "search_post_2",
+      "name": "Gunung Jayawijaya",
+      "location": "Papua, Indonesia",
+      "description": "Puncak tertinggi di Indonesia, tantangan bagi pendaki.",
+      "image": "https://picsum.photos/seed/searchmountain1/400/250",
+      "reviews": 80, "commentsCount": 20,
+      "ownerName": "Pendaki B", "ownerAvatar": "https://picsum.photos/seed/ava2/50/50"
+    },
+    {
+      "id": "search_post_3",
+      "name": "Kota Tua Jakarta",
+      "location": "Jakarta, Indonesia",
+      "description": "Distrik bersejarah dengan arsitektur kolonial Belanda.",
+      "image": "https://picsum.photos/seed/searchcity1/400/250",
+      "reviews": 200, "commentsCount": 50,
+      "ownerName": "Sejarahwan C", "ownerAvatar": "https://picsum.photos/seed/ava3/50/50"
+    },
+    {
+      "id": "search_post_4",
+      "name": "Restoran Seafood Jaya",
+      "location": "Denpasar, Bali",
+      "description": "Restoran seafood terbaik dengan pemandangan laut.",
+      "image": "https://picsum.photos/seed/searchrestaurant1/400/250",
+      "reviews": 150, "commentsCount": 45,
+      "ownerName": "Foodie D", "ownerAvatar": "https://picsum.photos/seed/ava4/50/50"
+    },
+    {
+      "id": "search_post_5",
+      "name": "Museum Nasional",
+      "location": "Jakarta, Indonesia",
+      "description": "Koleksi artefak budaya dan sejarah Indonesia.",
+      "image": "https://picsum.photos/seed/searchmuseum1/400/250",
+      "reviews": 90, "commentsCount": 25,
+      "ownerName": "Pustakawan E", "ownerAvatar": "https://picsum.photos/seed/ava5/50/50"
+    },
+    {
+      "id": "search_post_6",
+      "name": "Gunung Merapi",
+      "location": "Yogyakarta, Indonesia",
+      "description": "Gunung berapi aktif yang megah.",
+      "image": "https://picsum.photos/seed/searchmountain2/400/250",
+      "reviews": 110, "commentsCount": 30,
+      "ownerName": "Petualang F", "ownerAvatar": "https://picsum.photos/seed/ava6/50/50"
+    },
+     {
+      "id": "search_post_7",
+      "name": "Pantai Sanur",
+      "location": "Bali, Indonesia",
+      "description": "Pantai indah untuk menikmati sunrise.",
+      "image": "https://picsum.photos/seed/beach2/400/250",
+      "reviews": 95, "commentsCount": 18,
+      "ownerName": "Fotografer G", "ownerAvatar": "https://picsum.photos/seed/ava7/50/50"
+    },
   ];
 
-  final List<Map<String, dynamic>> searchResults = [
-    {
-      'name': 'Bali Beach Paradise',
-      'location': 'Bali, Indonesia',
-      'image': 'images/bali.jpg',
-      'rating': 4.8,
-      'reviews': 1234,
-      'category': 'Beach',
-    },
-    {
-      'name': 'Dubai Marina',
-      'location': 'Dubai, UAE',
-      'image': 'images/dubai.jpg',
-      'rating': 4.6,
-      'reviews': 856,
-      'category': 'City',
-    },
-    {
-      'name': 'Paris Louvre',
-      'location': 'Paris, France',
-      'image': 'images/france.jpg',
-      'rating': 4.9,
-      'reviews': 2341,
-      'category': 'Museum',
-    },
-  ];
+  List<Map<String, dynamic>> _filteredPosts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredPosts = _allSearchablePosts;
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredPosts = _allSearchablePosts;
+        isSearching = false;
+      } else {
+        _filteredPosts = _allSearchablePosts.where((post) {
+          final postName = (post['name'] as String).toLowerCase();
+          return postName.contains(query);
+        }).toList();
+        isSearching = true;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +123,7 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: _buildAppBar(textTheme),
       body: Column(
         children: [
-          _buildSearchSection(),
+          _buildSearchBar(),
           Expanded(
             child: isSearching ? _buildSearchResults() : _buildSearchHome(),
           ),
@@ -87,7 +151,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildSearchSection() {
+  Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.all(16),
       child: Container(
@@ -104,11 +168,6 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
         child: TextField(
           controller: _searchController,
-          onChanged: (value) {
-            setState(() {
-              isSearching = value.isNotEmpty;
-            });
-          },
           decoration: InputDecoration(
             hintText: 'Search destinations, cities, activities...',
             hintStyle: TextStyle(color: Colors.grey[600]),
@@ -119,12 +178,9 @@ class _SearchScreenState extends State<SearchScreen> {
                     icon: Icon(Icons.clear, color: Colors.grey[600]),
                     onPressed: () {
                       _searchController.clear();
-                      setState(() {
-                        isSearching = false;
-                      });
                     },
                   )
-                : Icon(Icons.mic, color: Colors.grey[600]),
+                : null,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 20,
               vertical: 16,
@@ -135,51 +191,82 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  // Tampilan ketika search bar kosong (hanya Popular Searches)
   Widget _buildSearchHome() {
     final TextTheme textTheme = Theme.of(context).textTheme;
     
+    final List<String> popularSearches = [
+      'Pantai Sanur',
+      'Kota Tua Jakarta',
+      'Museum Nasional',
+      'Pantai Indah',
+      'Restoran Seafood Jaya',
+    ];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Browse Categories', textTheme),
-          const SizedBox(height: 12),
-          _buildCategoriesGrid(),
-          const SizedBox(height: 24),
+          // _buildSectionTitle('Browse Categories', textTheme), <-- Dihapus
+          // const SizedBox(height: 12), <-- Dihapus
+          // _buildCategoriesGrid(), <-- Dihapus
+          // const SizedBox(height: 24), <-- Dihapus
           _buildSectionTitle('Popular Searches', textTheme),
           const SizedBox(height: 12),
-          _buildPopularSearches(),
+          _buildPopularSearches(popularSearches),
         ],
       ),
     );
   }
 
+  // Tampilan ketika ada hasil pencarian
   Widget _buildSearchResults() {
     final TextTheme textTheme = Theme.of(context).textTheme;
     
+    if (_filteredPosts.isEmpty && _searchController.text.isNotEmpty) {
+      return Center(
+        child: Text(
+          'No results found for "${_searchController.text}"',
+          style: textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              Text(
-                '${searchResults.length} results found',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          child: Text(
+            '${_filteredPosts.length} results found',
+            style: textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: searchResults.length,
+            itemCount: _filteredPosts.length,
             itemBuilder: (context, index) {
-              return _buildResultItem(searchResults[index]);
+              final postData = _filteredPosts[index];
+              return PostCard(
+                postData: postData,
+                ownerName: postData['ownerName'] ?? 'Unknown User',
+                ownerAvatar: postData['ownerAvatar'] ?? 'https://via.placeholder.com/50',
+                onTap: () { // <-- Tambahkan onTap untuk navigasi
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DestinationDetailPage(destination: postData),
+                        ),
+                      );
+                    },
+                // onDelete tidak diteruskan, sehingga tombol delete tidak muncul
+              );
             },
           ),
         ),
@@ -197,91 +284,9 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildCategoriesGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 2.5,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        return InkWell(
-          onTap: () {
-            _searchController.text = category['name'];
-            setState(() {
-              isSearching = true;
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.lightTeal.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    category['icon'],
-                    color: AppColors.lightTeal,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        category['name'],
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryDark,
-                          fontSize: 13,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '${category['count']} places',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  // _buildCategoriesGrid() tidak lagi digunakan untuk tampilan
 
-  Widget _buildPopularSearches() {
-    final List<String> popularSearches = [
-      'Bali destinations',
-      'Dubai attractions',
-      'Paris tours',
-      'India heritage',
-      'Mexico culture',
-      'Beach resorts',
-    ];
-
+  Widget _buildPopularSearches(List<String> popularSearches) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -289,9 +294,6 @@ class _SearchScreenState extends State<SearchScreen> {
         return InkWell(
           onTap: () {
             _searchController.text = search;
-            setState(() {
-              isSearching = true;
-            });
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -310,104 +312,6 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         );
       }).toList(),
-    );
-  }
-
-  Widget _buildResultItem(Map<String, dynamic> result) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => DetailPage.DestinationDetailPage(destination: result),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  result['image'],
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      result['name'],
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primaryDark,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      result['location'],
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.star, size: 16, color: Colors.amber),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${result['rating']}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.primaryDark,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${result['reviews']})',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: Icon(
-                  Icons.bookmark_border,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
