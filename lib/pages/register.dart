@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Sudah terpakai sekarang!
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:jelajahin_apps/main.dart'; // Import main.dart for AppColors and global theme access
 import 'package:jelajahin_apps/pages/login.dart'; // Import login page
@@ -84,19 +85,38 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      // 1. Register user with Firebase Authentication
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: username, // 'username' is used as 'email' for Firebase
         password: password,
       );
 
-      widget.onRegister(username, password);
+      // 2. Get the newly created user's UID
+      String? userId = userCredential.user?.uid;
 
-      showCustomDialog("Berhasil", "Registrasi berhasil!", onConfirm: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-        );
-      });
+      if (userId != null) {
+        // 3. Save additional user data to Cloud Firestore
+        // We'll create a document in a 'users' collection with the user's UID as the document ID.
+        await FirebaseFirestore.instance.collection('users').doc(userId).set({
+          'name': name,
+          'email': username, // Menyimpan email juga untuk referensi
+          'createdAt': FieldValue.serverTimestamp(), // Timestamp kapan user dibuat
+        });
+
+        // Inform the parent widget about successful registration
+        widget.onRegister(username, password);
+
+        showCustomDialog("Berhasil", "Registrasi berhasil!", onConfirm: () {
+          // Navigate to the login page after successful registration and data saving
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        });
+      } else {
+        // This case should ideally not happen if createUserWithEmailAndPassword succeeds
+        showCustomDialog("Gagal", "Terjadi kesalahan: UID pengguna tidak ditemukan.");
+      }
     } on FirebaseAuthException catch (e) {
       String errorMessage = "Terjadi kesalahan yang tidak diketahui.";
       if (e.code == 'weak-password') {

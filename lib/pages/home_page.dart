@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:jelajahin_apps/main.dart';
 import 'package:jelajahin_apps/pages/search_screen.dart';
 import 'package:jelajahin_apps/pages/destination_detail_page.dart';
 import 'package:jelajahin_apps/pages/top_places_screen.dart';
+import 'dart:developer' as developer; // For logging
 
 class HomeContentPage extends StatefulWidget {
   const HomeContentPage({super.key});
@@ -14,70 +15,12 @@ class HomeContentPage extends StatefulWidget {
 }
 
 class _HomeContentPageState extends State<HomeContentPage> {
-  // Declare _currentUser as a nullable User object
   User? _currentUser;
+  List<Map<String, dynamic>> _featuredDestinations = [];
+  List<Map<String, dynamic>> _popularDestinations = [];
+  bool _isLoadingDestinations = true; // State untuk indikator loading
 
-  @override
-  void initState() {
-    super.initState();
-    // Initialize _currentUser when the widget is created
-    _currentUser = FirebaseAuth.instance.currentUser;
-
-    // Listen for authentication state changes
-    FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (mounted) { // Ensure the widget is still in the tree before calling setState
-        setState(() {
-          _currentUser = user;
-        });
-      }
-    });
-  }
-
-  final List<Map<String, dynamic>> featuredDestinations = [
-    {
-      'name': 'Bali Paradise',
-      'location': 'Bali, Indonesia',
-      'image': 'images/bali.jpg',
-      'rating': 4.8,
-      'reviews': 2453,
-    },
-    {
-      'name': 'Dubai Skyline',
-      'location': 'Dubai, UAE',
-      'image': 'images/dubai.jpg',
-      'rating': 4.9,
-      'reviews': 1876,
-    },
-    {
-      'name': 'France Beauty',
-      'location': 'Paris, France',
-      'image': 'images/france.jpg',
-      'rating': 4.7,
-      'reviews': 3241,
-    },
-  ];
-
-  final List<Map<String, dynamic>> popularDestinations = [
-    {
-      'name': 'Taj Mahal',
-      'location': 'Agra, India',
-      'image': 'images/india.jpg',
-      'rating': 4.6,
-    },
-    {
-      'name': 'Mexico City',
-      'location': 'Mexico',
-      'image': 'images/mexico.jpg',
-      'rating': 4.8,
-    },
-    {
-      'name': 'Beautiful Profile',
-      'location': 'Special Place',
-      'image': 'images/profile.jpg',
-      'rating': 4.5,
-    },
-  ];
-
+  // Categories (ini tetap statis atau bisa juga diambil dari Firestore jika ada koleksi kategori)
   final List<Map<String, dynamic>> categories = [
     {
       'name': 'Restaurants',
@@ -85,7 +28,7 @@ class _HomeContentPageState extends State<HomeContentPage> {
       'color': AppColors.lightTeal,
     },
     {
-      'name': 'Chain Sets',
+      'name': 'Chain Sets', // Ini mungkin maksudnya "Coffee Chains" atau sejenisnya?
       'icon': Icons.local_cafe,
       'color': AppColors.darkBrown,
     },
@@ -100,6 +43,82 @@ class _HomeContentPageState extends State<HomeContentPage> {
       'color': AppColors.darkTeal,
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = FirebaseAuth.instance.currentUser;
+
+    // Listen for authentication state changes to update _currentUser
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+        });
+      }
+    });
+
+    // Muat data destinasi dari Firestore saat initState
+    _loadDestinations();
+  }
+
+  // Fungsi untuk memuat destinasi dari Firestore
+  Future<void> _loadDestinations() async {
+    setState(() {
+      _isLoadingDestinations = true; // Set loading state
+    });
+
+    try {
+      // Query untuk "Most Viewed" (contoh: berdasarkan field 'views' tertinggi)
+      QuerySnapshot featuredSnapshot = await FirebaseFirestore.instance
+          .collection('destinations')
+          .orderBy('views', descending: true) // Asumsi ada field 'views'
+          .limit(5) // Ambil 5 destinasi teratas
+          .get();
+
+      List<Map<String, dynamic>> loadedFeatured = featuredSnapshot.docs.map((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id; // Tambahkan ID dokumen
+        return data;
+      }).toList();
+
+      // Query untuk "Popular Destinations" (contoh: berdasarkan 'createdAt' terbaru)
+      QuerySnapshot popularSnapshot = await FirebaseFirestore.instance
+          .collection('destinations')
+          .orderBy('createdAt', descending: true) // Asumsi ada field 'createdAt' (Timestamp)
+          .limit(5) // Ambil 5 destinasi terbaru
+          .get();
+
+      List<Map<String, dynamic>> loadedPopular = popularSnapshot.docs.map((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id; // Tambahkan ID dokumen
+        return data;
+      }).toList();
+
+      setState(() {
+        _featuredDestinations = loadedFeatured;
+        _popularDestinations = loadedPopular;
+      });
+      developer.log('Destinations loaded successfully: Featured ${_featuredDestinations.length}, Popular ${_popularDestinations.length}');
+
+    } catch (e, stackTrace) {
+      developer.log('Error loading destinations: $e', error: e, stackTrace: stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load destinations: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingDestinations = false; // Selesai loading
+        });
+      }
+    }
+  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -130,9 +149,16 @@ class _HomeContentPageState extends State<HomeContentPage> {
               const SizedBox(height: 24),
               _buildCategoriesSection(textTheme),
               const SizedBox(height: 24),
-              _buildFeaturedSection(textTheme),
-              const SizedBox(height: 24),
-              _buildPopularSection(textTheme),
+              // Tampilkan CircularProgressIndicator jika sedang loading
+              _isLoadingDestinations
+                  ? Center(child: CircularProgressIndicator(color: AppColors.lightTeal))
+                  : Column(
+                      children: [
+                        _buildFeaturedSection(textTheme),
+                        const SizedBox(height: 24),
+                        _buildPopularSection(textTheme),
+                      ],
+                    ),
               const SizedBox(height: 20),
             ],
           ),
@@ -150,14 +176,13 @@ class _HomeContentPageState extends State<HomeContentPage> {
           children: [
             Row(
               children: [
-                const Icon( // Made Icon const
+                const Icon(
                   Icons.waving_hand,
                   color: Colors.amber,
                   size: 24,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  // Use null-aware operator for safety, though initState should handle it
                   'Halo, ${_currentUser?.displayName ?? 'Guest'}',
                   style: textTheme.headlineSmall?.copyWith(
                     color: AppColors.primaryDark,
@@ -330,15 +355,23 @@ class _HomeContentPageState extends State<HomeContentPage> {
           ],
         ),
         const SizedBox(height: 16),
+        // Gunakan _featuredDestinations dari Firestore
         SizedBox(
           height: 280,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: featuredDestinations.length,
-            itemBuilder: (context, index) {
-              return _buildFeaturedCard(featuredDestinations[index]);
-            },
-          ),
+          child: _featuredDestinations.isEmpty && !_isLoadingDestinations
+              ? Center(
+                  child: Text(
+                    'No featured destinations found.',
+                    style: textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                  ),
+                )
+              : ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _featuredDestinations.length,
+                  itemBuilder: (context, index) {
+                    return _buildFeaturedCard(_featuredDestinations[index]);
+                  },
+                ),
         ),
       ],
     );
@@ -375,7 +408,10 @@ class _HomeContentPageState extends State<HomeContentPage> {
                 height: 280,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: AssetImage(destination['image']),
+                    // Memeriksa apakah 'image' adalah path lokal atau URL
+                    image: (destination['image'] as String).startsWith('http')
+                        ? NetworkImage(destination['image']) as ImageProvider
+                        : AssetImage(destination['image']) as ImageProvider,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -414,8 +450,8 @@ class _HomeContentPageState extends State<HomeContentPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      destination['name'],
-                      style: TextStyle(
+                      destination['name'] ?? 'No Name', // Handle null data
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -423,7 +459,7 @@ class _HomeContentPageState extends State<HomeContentPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      destination['location'],
+                      destination['location'] ?? 'Unknown Location', // Handle null data
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
                         fontSize: 14,
@@ -432,15 +468,15 @@ class _HomeContentPageState extends State<HomeContentPage> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.star, color: Colors.amber, size: 16),
+                        const Icon(Icons.star, color: Colors.amber, size: 16),
                         const SizedBox(width: 4),
                         Text(
-                          '${destination['rating']}',
-                          style: TextStyle(color: Colors.white, fontSize: 14),
+                          '${destination['rating'] ?? 0.0}', // Handle null data
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '(${destination['reviews']} reviews)',
+                          '(${destination['reviews'] ?? 0} reviews)', // Handle null data
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 12,
@@ -487,7 +523,17 @@ class _HomeContentPageState extends State<HomeContentPage> {
           ],
         ),
         const SizedBox(height: 16),
-        ...popularDestinations.map((destination) => _buildPopularItem(destination)).toList(),
+        // Gunakan _popularDestinations dari Firestore
+        _popularDestinations.isEmpty && !_isLoadingDestinations
+            ? Center(
+                child: Text(
+                  'No popular destinations found.',
+                  style: textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                ),
+              )
+            : Column(
+                children: _popularDestinations.map((destination) => _buildPopularItem(destination)).toList(),
+              ),
       ],
     );
   }
@@ -520,8 +566,11 @@ class _HomeContentPageState extends State<HomeContentPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                destination['image'],
+              child: Image( // Use Image widget directly
+                // Memeriksa apakah 'image' adalah path lokal atau URL
+                image: (destination['image'] as String).startsWith('http')
+                    ? NetworkImage(destination['image']) as ImageProvider
+                    : AssetImage(destination['image']) as ImageProvider,
                 width: 60,
                 height: 60,
                 fit: BoxFit.cover,
@@ -533,7 +582,7 @@ class _HomeContentPageState extends State<HomeContentPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    destination['name'],
+                    destination['name'] ?? 'No Name', // Handle null data
                     style: TextStyle(
                       color: AppColors.primaryDark,
                       fontSize: 16,
@@ -542,7 +591,7 @@ class _HomeContentPageState extends State<HomeContentPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    destination['location'],
+                    destination['location'] ?? 'Unknown Location', // Handle null data
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 14,
@@ -551,10 +600,10 @@ class _HomeContentPageState extends State<HomeContentPage> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.star, color: Colors.amber, size: 16),
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
                       const SizedBox(width: 4),
                       Text(
-                        '${destination['rating']}',
+                        '${destination['rating'] ?? 0.0}', // Handle null data
                         style: TextStyle(
                           color: AppColors.primaryDark,
                           fontSize: 14,
@@ -567,7 +616,12 @@ class _HomeContentPageState extends State<HomeContentPage> {
               ),
             ),
             IconButton(
-              onPressed: () {},
+              onPressed: () {
+                // Implement favorite/bookmark logic here
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Tapped bookmark for ${destination['name']}')),
+                );
+              },
               icon: Icon(
                 Icons.bookmark_border,
                 color: AppColors.lightTeal,

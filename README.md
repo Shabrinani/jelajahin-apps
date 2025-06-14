@@ -1,7 +1,3 @@
-# welcome
-
-A new Flutter project.
-
 # Jelajahin - Aplikasi Komunitas Penjelajah Dunia
 
 **Jelajahin** adalah aplikasi mobile berbasis Flutter yang dirancang sebagai wadah komunitas bagi para pecinta wisata. Aplikasi ini memungkinkan pengguna untuk **berbagi pengalaman dan menemukan destinasi menarik dari seluruh dunia**, serta berinteraksi melalui **fitur like dan komentar**.
