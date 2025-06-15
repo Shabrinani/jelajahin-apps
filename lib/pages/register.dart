@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Sudah terpakai sekarang!
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:jelajahin_apps/main.dart'; // Import main.dart for AppColors and global theme access
+// Import theme/colors.dart directly for AppColors
+import 'package:jelajahin_apps/theme/colors.dart';
 import 'package:jelajahin_apps/pages/login.dart'; // Import login page
-// Google Fonts is no longer needed directly here since it's configured in main.dart
 
 class RegisterPage extends StatefulWidget {
   final Function(String, String) onRegister;
@@ -23,6 +23,13 @@ class _RegisterPageState extends State<RegisterPage> {
   bool showPassword = false;
   bool showRetypePassword = false;
   bool acceptTerms = false;
+  bool _isLoading = false; // State for loading indicator
+
+  // Default profile picture URL (replace with your actual default image URL)
+  // You might want to upload a default image to Firebase Storage and get its download URL.
+  // For now, I'll use a placeholder.
+  static const String _defaultProfilePictureUrl =
+      'https://firebasestorage.googleapis.com/v0/b/jelajahin-apps.appspot.com/o/default_profile_picture.png?alt=media&token=YOUR_GENERATED_TOKEN'; // <--- PERHATIAN: Ganti dengan URL gambar default Anda
 
   void showCustomDialog(String title, String message, {VoidCallback? onConfirm}) {
     showDialog(
@@ -31,7 +38,6 @@ class _RegisterPageState extends State<RegisterPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           title,
-          // Using Theme.of(context).textTheme directly, as Poppins is set globally
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -40,7 +46,6 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         content: Text(
           message,
-          // Using Theme.of(context).textTheme directly
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: AppColors.black,
           ),
@@ -84,6 +89,10 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    setState(() {
+      _isLoading = true; // Show loading indicator
+    });
+
     try {
       // 1. Register user with Firebase Authentication
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -98,12 +107,15 @@ class _RegisterPageState extends State<RegisterPage> {
         // 3. Save additional user data to Cloud Firestore
         // We'll create a document in a 'users' collection with the user's UID as the document ID.
         await FirebaseFirestore.instance.collection('users').doc(userId).set({
+          'uid': userId, // Menambahkan UID di dalam dokumen juga untuk kemudahan query (sesuai DB schema)
           'name': name,
-          'email': username, // Menyimpan email juga untuk referensi
-          'createdAt': FieldValue.serverTimestamp(), // Timestamp kapan user dibuat
+          'email': username, // Menyimpan email juga untuk referensi (sesuai DB schema)
+          'profile_picture_url': _defaultProfilePictureUrl, // Menggunakan URL default yang telah ditentukan
+          'joined_at': FieldValue.serverTimestamp(), // Timestamp kapan user dibuat (sesuai DB schema)
+          'saved_posts_ids': [], // Array kosong untuk postingan yang disimpan (sesuai DB schema)
         });
 
-        // Inform the parent widget about successful registration
+        // Inform the parent widget about successful registration (if needed for specific flow)
         widget.onRegister(username, password);
 
         showCustomDialog("Berhasil", "Registrasi berhasil!", onConfirm: () {
@@ -129,12 +141,15 @@ class _RegisterPageState extends State<RegisterPage> {
       showCustomDialog("Gagal", "Registrasi gagal: $errorMessage");
     } catch (e) {
       showCustomDialog("Gagal", "Terjadi kesalahan saat registrasi: ${e.toString()}");
+    } finally {
+      setState(() {
+        _isLoading = false; // Hide loading indicator regardless of success or failure
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get the TextTheme from the global theme
     final TextTheme textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
@@ -173,7 +188,6 @@ class _RegisterPageState extends State<RegisterPage> {
               // "Let's Get Started"
               Text(
                 'Let\'s Get Started',
-                // Using textTheme directly. Poppins is already applied globally.
                 style: textTheme.headlineSmall?.copyWith(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -184,7 +198,6 @@ class _RegisterPageState extends State<RegisterPage> {
               Text(
                 'create your new account and find more beautiful destinations',
                 textAlign: TextAlign.center,
-                // Using textTheme directly.
                 style: textTheme.bodySmall?.copyWith(
                   fontSize: 14,
                   color: Colors.grey[600],
@@ -197,7 +210,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Name',
-                  // Using textTheme directly.
                   style: textTheme.labelLarge?.copyWith(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -225,8 +237,7 @@ class _RegisterPageState extends State<RegisterPage> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Email (for login)', // Clarified label for clarity
-                  // Using textTheme directly.
+                  'Email (for login)',
                   style: textTheme.labelLarge?.copyWith(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -237,9 +248,9 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 8),
               TextField(
                 controller: usernameController,
-                keyboardType: TextInputType.emailAddress, // Ensure email keyboard type
+                keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  hintText: "Enter your email", // Change hint text to reflect email
+                  hintText: "Enter your email",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -256,7 +267,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Password',
-                  // Using textTheme directly.
                   style: textTheme.labelLarge?.copyWith(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -297,7 +307,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Re-type Password',
-                  // Using textTheme directly.
                   style: textTheme.labelLarge?.copyWith(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -348,7 +357,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   Text(
                     'Accept term of service',
-                    // Using textTheme directly.
                     style: textTheme.bodySmall?.copyWith(
                       fontSize: 14,
                       color: AppColors.lightTeal,
@@ -363,7 +371,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: register,
+                  onPressed: _isLoading ? null : register, // Disable button when loading
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryDark,
                     foregroundColor: AppColors.white,
@@ -372,15 +380,16 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     elevation: 0,
                   ),
-                  child: Text(
-                    "Sign Up",
-                    // Using textTheme directly.
-                    style: textTheme.labelLarge?.copyWith(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.white
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: AppColors.white) // Show loading indicator
+                      : Text(
+                          "Sign Up",
+                          style: textTheme.labelLarge?.copyWith(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.white,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 50),
@@ -391,7 +400,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 children: [
                   Text(
                     "Already have an account?",
-                    // Using textTheme directly.
                     style: textTheme.bodySmall?.copyWith(
                       fontSize: 14,
                       color: Colors.grey[700],
@@ -406,7 +414,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                     child: Text(
                       'Sign In',
-                      // Using textTheme directly.
                       style: textTheme.labelSmall?.copyWith(
                         fontSize: 14,
                         color: AppColors.lightTeal,

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-import 'package:jelajahin_apps/main.dart'; // Import AppColors
-import 'dart:developer' as developer; // Import for developer.log
-import 'package:intl/intl.dart'; // Import for date formatting
+import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:jelajahin_apps/main.dart'; // <--- Ubah ini jika AppColors ada di tempat lain
+import 'package:jelajahin_apps/theme/colors.dart'; // Asumsi AppColors ada di sini
+import 'dart:developer' as developer;
+import 'package:intl/intl.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -16,15 +17,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController(); // Controller baru untuk nomor telepon
-  final TextEditingController _dobController = TextEditingController(); // Controller baru untuk tanggal lahir
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _dobController = TextEditingController();
 
   User? _currentUser;
   bool _isLoading = false;
 
-  String? _selectedAvatarUrl; // Untuk menyimpan path avatar yang dipilih
-  DateTime? _selectedDate; // Untuk menyimpan tanggal lahir yang dipilih
-  String? _selectedGender; // Untuk menyimpan jenis kelamin yang dipilih
+  String? _selectedAvatarUrl;
+  DateTime? _selectedDate;
+  String? _selectedGender;
 
   final List<String> _availableAvatars = [
     'assets/profile_avatars/avatar1.png',
@@ -39,7 +40,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     'assets/profile_avatars/avatar10.png',
   ];
 
-  final List<String> _genderOptions = ['Pria', 'Wanita', 'Lainnya']; // Opsi jenis kelamin
+  final List<String> _genderOptions = ['Pria', 'Wanita', 'Lainnya'];
 
   @override
   void initState() {
@@ -49,16 +50,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _fullNameController.text = _currentUser!.displayName ?? '';
       _emailController.text = _currentUser!.email ?? '';
 
-      // Muat data pengguna dari Firestore saat initState
       _loadUserData();
     }
   }
 
+  // --- START: Perubahan di _loadUserData() ---
   Future<void> _loadUserData() async {
     if (_currentUser == null) {
       developer.log('WARNING: _loadUserData called but _currentUser is null.');
       return;
     }
+
+    setState(() {
+      _isLoading = true; // Set loading true while fetching data
+    });
 
     try {
       developer.log('Attempting to load user data for UID: ${_currentUser!.uid}');
@@ -68,51 +73,51 @@ class _EditProfilePageState extends State<EditProfilePage> {
           .get();
 
       if (userDoc.exists) {
-        // Data ditemukan di Firestore
-        setState(() {
-          _selectedAvatarUrl = userDoc.get('avatarUrl') as String?;
-          _phoneController.text = userDoc.get('phoneNumber') as String? ?? ''; // Muat nomor telepon
-          
-          // Muat tanggal lahir
-          Timestamp? dobTimestamp = userDoc.get('dateOfBirth') as Timestamp?;
-          if (dobTimestamp != null) {
-            _selectedDate = dobTimestamp.toDate();
-            _dobController.text = DateFormat('dd/MM/yyyy').format(_selectedDate!);
-            developer.log('Firestore: Date of Birth loaded: ${_dobController.text}');
-          } else {
-            _selectedDate = null;
-            _dobController.text = '';
-            developer.log('Firestore: Date of Birth is null.');
-          }
+        final userData = userDoc.data() as Map<String, dynamic>;
+        
+        // Memuat avatar URL
+        String? loadedAvatarUrl = userData['avatarUrl'] as String?;
+        if (loadedAvatarUrl != null && _availableAvatars.contains(loadedAvatarUrl)) {
+          _selectedAvatarUrl = loadedAvatarUrl;
+          developer.log('Firestore: Avatar URL loaded: $_selectedAvatarUrl');
+        } else {
+          _selectedAvatarUrl = _availableAvatars.first; // Default jika tidak ada/tidak valid
+          developer.log('Firestore: avatarUrl is null, empty, or not in list. Using default: $_selectedAvatarUrl');
+        }
 
-          // Muat jenis kelamin
-          _selectedGender = userDoc.get('gender') as String?;
-          developer.log('Firestore: Gender loaded: $_selectedGender');
+        // Memuat nomor telepon
+        _phoneController.text = userData['phoneNumber'] as String? ?? '';
+        developer.log('Firestore: Phone number loaded: ${_phoneController.text}');
 
-
-          if (_selectedAvatarUrl == null || _selectedAvatarUrl!.isEmpty) { 
-            developer.log('Firestore: avatarUrl is null or empty, using default first avatar.'); 
-            _selectedAvatarUrl = _availableAvatars.first;
-          } else {
-            developer.log('Firestore: Avatar URL loaded: $_selectedAvatarUrl');
-            if (!_availableAvatars.contains(_selectedAvatarUrl)) {
-              developer.log('WARNING: Loaded avatar URL "$_selectedAvatarUrl" is not in _availableAvatars list. Using default.');
-              _selectedAvatarUrl = _availableAvatars.first;
-            }
-          }
-          developer.log('Final _selectedAvatarUrl after loading: $_selectedAvatarUrl');
-          developer.log('Phone number loaded: ${_phoneController.text}'); 
-        });
-      } else {
-        // Dokumen pengguna tidak ada di Firestore, atur avatar default
-        developer.log('User document does not exist for UID: ${_currentUser!.uid}. Setting default avatar.');
-        setState(() {
-          _selectedAvatarUrl = _availableAvatars.first; // Atur ke avatar pertama sebagai default
-          _phoneController.text = ''; // Kosongkan nomor telepon
-          _dobController.text = ''; // Kosongkan tanggal lahir
+        // Memuat tanggal lahir
+        Timestamp? dobTimestamp = userData['dateOfBirth'] as Timestamp?;
+        if (dobTimestamp != null) {
+          _selectedDate = dobTimestamp.toDate();
+          _dobController.text = DateFormat('dd/MM/yyyy').format(_selectedDate!);
+          developer.log('Firestore: Date of Birth loaded: ${_dobController.text}');
+        } else {
           _selectedDate = null;
-          _selectedGender = null; // Kosongkan jenis kelamin
-        });
+          _dobController.text = '';
+          developer.log('Firestore: Date of Birth is null.');
+        }
+
+        // Memuat jenis kelamin
+        _selectedGender = userData['gender'] as String?;
+        // Pastikan nilai yang dimuat ada di dalam _genderOptions
+        if (_selectedGender != null && !_genderOptions.contains(_selectedGender)) {
+          _selectedGender = null; // Atur ke null jika nilai tidak valid
+          developer.log('Firestore: Loaded gender "$_selectedGender" is not in _genderOptions list. Setting to null.');
+        }
+        developer.log('Firestore: Gender loaded: $_selectedGender');
+
+      } else {
+        // Dokumen pengguna tidak ada di Firestore, atur nilai default
+        developer.log('User document does not exist for UID: ${_currentUser!.uid}. Setting default values.');
+        _selectedAvatarUrl = _availableAvatars.first;
+        _phoneController.text = '';
+        _dobController.text = '';
+        _selectedDate = null;
+        _selectedGender = null;
       }
     } catch (e, stackTrace) {
       developer.log("ERROR: Failed to load user data from Firestore: $e", error: e, stackTrace: stackTrace);
@@ -124,26 +129,32 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         );
       }
-      // Atur avatar default sebagai fallback bahkan jika ada error loading
-      setState(() {
-        _selectedAvatarUrl = _availableAvatars.first;
-        _phoneController.text = '';
-        _dobController.text = '';
-        _selectedDate = null;
-        _selectedGender = null;
-      });
+      // Atur nilai default sebagai fallback bahkan jika ada error loading
+      _selectedAvatarUrl = _availableAvatars.first;
+      _phoneController.text = '';
+      _dobController.text = '';
+      _selectedDate = null;
+      _selectedGender = null;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Set loading false after fetching data
+        });
+      }
     }
   }
+  // --- END: Perubahan di _loadUserData() ---
 
   @override
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose(); // Dispose controller nomor telepon
-    _dobController.dispose(); // Dispose controller tanggal lahir
+    _phoneController.dispose();
+    _dobController.dispose();
     super.dispose();
   }
 
+  // --- START: Perubahan di _updateProfile() ---
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -158,35 +169,40 @@ class _EditProfilePageState extends State<EditProfilePage> {
         // 1. Update display name di Firebase Authentication
         if (_fullNameController.text.trim() != (_currentUser!.displayName ?? '')) {
           await _currentUser!.updateDisplayName(_fullNameController.text.trim());
-          developer.log('Firebase Auth display name updated.'); // LOGGING
+          developer.log('Firebase Auth display name updated.');
         }
 
-        // 2. Update data tambahan (avatar URL, phone, dob, gender) di Cloud Firestore
+        // 2. Siapkan data untuk update di Cloud Firestore
         Map<String, dynamic> updateData = {
           'avatarUrl': _selectedAvatarUrl, // Simpan URL avatar yang dipilih
           'phoneNumber': _phoneController.text.trim(), // Simpan nomor telepon
           'lastUpdated': FieldValue.serverTimestamp(), // Tambahkan timestamp
         };
 
+        // Tanggal Lahir: Jika ada tanggal yang dipilih, simpan sebagai Timestamp. Jika tidak, hapus field.
         if (_selectedDate != null) {
-          updateData['dateOfBirth'] = Timestamp.fromDate(_selectedDate!); // Simpan tanggal lahir sebagai Timestamp
+          updateData['dateOfBirth'] = Timestamp.fromDate(_selectedDate!);
+          developer.log('Saving dateOfBirth as Timestamp: ${Timestamp.fromDate(_selectedDate!)}');
         } else {
-          // Jika tanggal lahir dikosongkan, hapus field dari Firestore
-          updateData['dateOfBirth'] = FieldValue.delete();
+          updateData['dateOfBirth'] = FieldValue.delete(); // Hapus field dari Firestore
+          developer.log('dateOfBirth will be deleted from Firestore.');
         }
 
+        // Jenis Kelamin: Jika ada jenis kelamin yang dipilih dan tidak kosong, simpan. Jika tidak, hapus field.
         if (_selectedGender != null && _selectedGender!.isNotEmpty) {
-          updateData['gender'] = _selectedGender; // Simpan jenis kelamin
+          updateData['gender'] = _selectedGender;
+          developer.log('Saving gender: $_selectedGender');
         } else {
-          // Jika jenis kelamin dikosongkan, hapus field dari Firestore
-          updateData['gender'] = FieldValue.delete();
+          updateData['gender'] = FieldValue.delete(); // Hapus field dari Firestore
+          developer.log('gender will be deleted from Firestore.');
         }
 
+        // Lakukan update ke Firestore
         await FirebaseFirestore.instance.collection('users').doc(_currentUser!.uid).set(
           updateData,
           SetOptions(merge: true), // Gunakan merge agar tidak menimpa field lain
         );
-        developer.log('Firestore user data updated. Avatar URL saved: $_selectedAvatarUrl, Phone: ${_phoneController.text}, DOB: $_selectedDate, Gender: $_selectedGender'); // LOGGING
+        developer.log('Firestore user data updated. Final data: $updateData');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -198,11 +214,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
           Navigator.pop(context); // Kembali ke halaman profil
         }
       } else {
-        developer.log('Current user is null, cannot update profile.'); // LOGGING
+        developer.log('Current user is null, cannot update profile.');
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Gagal memperbarui profil: ${e.message}';
-      developer.log('FirebaseAuthException: $errorMessage'); // LOGGING
+      developer.log('FirebaseAuthException: $errorMessage', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -211,8 +227,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         );
       }
-    } catch (e) {
-      developer.log('Unexpected error updating profile: $e'); // LOGGING
+    } catch (e, stackTrace) {
+      developer.log('Unexpected error updating profile: $e', error: e, stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -229,8 +245,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
     }
   }
+  // --- END: Perubahan di _updateProfile() ---
 
-  // Fungsi untuk menampilkan DatePicker
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -263,7 +279,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  // Fungsi untuk menampilkan Bottom Sheet pilihan avatar
   void _showAvatarSelectionBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -301,14 +316,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   itemBuilder: (context, index) {
                     final avatarPath = _availableAvatars[index];
                     final isSelected = _selectedAvatarUrl == avatarPath;
-                    developer.log('Attempting to load avatar: $avatarPath'); // LOGGING
+                    developer.log('Attempting to load avatar: $avatarPath');
                     return GestureDetector(
                       onTap: () {
                         setState(() {
                           _selectedAvatarUrl = avatarPath;
                         });
-                        developer.log('Selected avatar: $_selectedAvatarUrl'); // LOGGING
-                        Navigator.pop(context); // Tutup bottom sheet setelah memilih
+                        developer.log('Selected avatar: $_selectedAvatarUrl');
+                        Navigator.pop(context);
                       },
                       child: Stack(
                         alignment: Alignment.center,
@@ -349,16 +364,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
 
-    // Menentukan gambar avatar yang akan ditampilkan di halaman edit
     ImageProvider? currentAvatarImage;
     if (_selectedAvatarUrl != null) {
-      currentAvatarImage = AssetImage(_selectedAvatarUrl!); 
-      developer.log('Current profile avatar being used: $_selectedAvatarUrl'); // LOGGING
-    } else if (_currentUser?.photoURL != null) {
-      currentAvatarImage = NetworkImage(_currentUser!.photoURL!);
-      developer.log('Current profile avatar using Firebase Auth photoURL: ${_currentUser!.photoURL!}'); // LOGGING
+      currentAvatarImage = AssetImage(_selectedAvatarUrl!);
+      developer.log('Current profile avatar being used: $_selectedAvatarUrl');
     } else {
-      developer.log('No specific avatar selected, using default person icon.'); // LOGGING
+      currentAvatarImage = AssetImage(_availableAvatars.first); // Fallback to default if _selectedAvatarUrl is null
+      developer.log('No specific avatar selected, using default first avatar: ${_availableAvatars.first}');
     }
 
     return Scaffold(
@@ -380,212 +392,204 @@ class _EditProfilePageState extends State<EditProfilePage> {
         centerTitle: true,
       ),
       body: _isLoading
-              ? Center(child: CircularProgressIndicator(color: AppColors.lightTeal))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+          ? Center(child: CircularProgressIndicator(color: AppColors.lightTeal))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Stack(
+                      alignment: Alignment.bottomRight,
                       children: [
-                        // Bagian Foto Profil
-                        Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            CircleAvatar(
-                              radius: 60,
-                              backgroundColor: AppColors.lightTeal.withOpacity(0.2),
-                              backgroundImage: currentAvatarImage, // Gunakan yang sudah ditentukan
-                              child: currentAvatarImage == null
-                                  ? Icon(
-                                      Icons.person,
-                                      size: 60,
-                                      color: AppColors.darkTeal,
-                                    )
-                                  : null,
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: GestureDetector(
-                                onTap: _showAvatarSelectionBottomSheet, // Panggil fungsi ini
-                                child: CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: AppColors.darkTeal,
-                                  child: Icon(Icons.camera_alt, color: AppColors.white, size: 18),
-                                ),
-                              ),
-                            ),
-                          ],
+                        CircleAvatar(
+                          radius: 60,
+                          backgroundColor: AppColors.lightTeal.withOpacity(0.2),
+                          backgroundImage: currentAvatarImage,
+                          child: currentAvatarImage == null
+                              ? Icon(
+                                  Icons.person,
+                                  size: 60,
+                                  color: AppColors.darkTeal,
+                                )
+                              : null,
                         ),
-                        const SizedBox(height: 15),
-
-                        // Nama Pengguna (Display Only)
-                        Text(
-                          _currentUser?.displayName ?? 'Your Name Here',
-                          style: textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryDark,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-
-                        // Form Fields
-                        _buildInputField(
-                          context,
-                          controller: _fullNameController,
-                          label: 'Full Name',
-                          hintText: 'Mahamud Hasan',
-                          icon: Icons.person,
-                          readOnly: false,
-                        ),
-                        const SizedBox(height: 20),
-                        _buildInputField(
-                          context,
-                          controller: _emailController,
-                          label: 'Email Address',
-                          hintText: 'hallo@fillo.com',
-                          icon: Icons.mail_outline,
-                          readOnly: true, // Email biasanya read-only
-                        ),
-                        const SizedBox(height: 20),
-                        // Input Field untuk Nomor Telepon
-                        _buildInputField(
-                          context,
-                          controller: _phoneController,
-                          label: 'Phone Number',
-                          hintText: '+62812xxxxxx', // Contoh hint untuk Indonesia
-                          icon: Icons.call,
-                          keyboardType: TextInputType.phone,
-                          readOnly: false,
-                          validator: (value) {
-                            if (value != null && value.isNotEmpty && !RegExp(r'^\+?[0-9]{7,15}$').hasMatch(value)) {
-                              return 'Format nomor telepon tidak valid.';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        // Input Field untuk Tanggal Lahir (dengan DatePicker)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Date of Birth',
-                              style: textTheme.labelLarge?.copyWith(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primaryDark,
-                              ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: _showAvatarSelectionBottomSheet,
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: AppColors.darkTeal,
+                              child: Icon(Icons.camera_alt, color: AppColors.white, size: 18),
                             ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _dobController,
-                              readOnly: true, // Tanggal dipilih dari date picker, bukan diketik
-                              decoration: InputDecoration(
-                                hintText: 'DD/MM/YYYY',
-                                prefixIcon: Icon(Icons.calendar_today, color: Colors.grey[600]),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide.none,
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey[100],
-                                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                              ),
-                              onTap: () => _selectDate(context), // Panggil date picker saat input di-tap
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Tanggal lahir tidak boleh kosong';
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        // Dropdown untuk Jenis Kelamin
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Gender',
-                              style: textTheme.labelLarge?.copyWith(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primaryDark,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            DropdownButtonFormField<String>(
-                              value: _selectedGender,
-                              hint: Text('Select your gender', style: TextStyle(color: Colors.grey[600])),
-                              decoration: InputDecoration(
-                                prefixIcon: Icon(Icons.people, color: Colors.grey[600]),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide.none,
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey[100],
-                                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                              ),
-                              items: _genderOptions.map((String gender) {
-                                return DropdownMenuItem<String>(
-                                  value: gender,
-                                  child: Text(gender),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  _selectedGender = newValue;
-                                });
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Jenis kelamin tidak boleh kosong';
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 40),
-
-                        // Save Button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _updateProfile,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryDark,
-                              foregroundColor: AppColors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: _isLoading
-                                ? CircularProgressIndicator(color: AppColors.white)
-                                : Text(
-                                    "Save Changes",
-                                    style: textTheme.labelLarge?.copyWith(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.white,
-                                    ),
-                                  ),
                           ),
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 15),
+                    Text(
+                      _currentUser?.displayName ?? 'Your Name Here',
+                      style: textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    _buildInputField(
+                      context,
+                      controller: _fullNameController,
+                      label: 'Full Name',
+                      hintText: 'Jelajahin',
+                      icon: Icons.person,
+                      readOnly: false,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildInputField(
+                      context,
+                      controller: _emailController,
+                      label: 'Email Address',
+                      hintText: 'Jelajahin@gmail.com',
+                      icon: Icons.mail_outline,
+                      readOnly: true,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildInputField(
+                      context,
+                      controller: _phoneController,
+                      label: 'Phone Number',
+                      hintText: '+62812xxxxxx',
+                      icon: Icons.call,
+                      keyboardType: TextInputType.phone,
+                      readOnly: false,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Nomor telepon tidak boleh kosong.';
+                        }
+                        if (!RegExp(r'^\+?[0-9]{7,15}$').hasMatch(value)) {
+                          return 'Format nomor telepon tidak valid.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Date of Birth',
+                          style: textTheme.labelLarge?.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _dobController,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            hintText: 'DD/MM/YYYY',
+                            prefixIcon: Icon(Icons.calendar_today, color: Colors.grey[600]),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                          ),
+                          onTap: () => _selectDate(context),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Tanggal lahir tidak boleh kosong';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Gender',
+                          style: textTheme.labelLarge?.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _selectedGender,
+                          hint: Text('Select your gender', style: TextStyle(color: Colors.grey[600])),
+                          decoration: InputDecoration(
+                            prefixIcon: Icon(Icons.people, color: Colors.grey[600]),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                          ),
+                          items: _genderOptions.map((String gender) {
+                            return DropdownMenuItem<String>(
+                              value: gender,
+                              child: Text(gender),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              _selectedGender = newValue;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Jenis kelamin tidak boleh kosong';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _updateProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryDark,
+                          foregroundColor: AppColors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _isLoading
+                            ? CircularProgressIndicator(color: AppColors.white)
+                            : Text(
+                                "Save Changes",
+                                style: textTheme.labelLarge?.copyWith(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+            ),
     );
   }
 
-  // Helper Widget untuk setiap input field dengan ikon
   Widget _buildInputField(
     BuildContext context, {
     required TextEditingController controller,
@@ -594,7 +598,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     required IconData icon,
     bool readOnly = false,
     TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator, // Tambahkan parameter validator
+    String? Function(String?)? validator,
   }) {
     final TextTheme textTheme = Theme.of(context).textTheme;
     return Column(
@@ -624,12 +628,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
             fillColor: Colors.grey[100],
             contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
           ),
-          validator: validator ?? (value) { // Gunakan validator yang diberikan, atau validator default
-            if (!readOnly && (value == null || value.isEmpty)) {
-              return '$label tidak boleh kosong';
-            }
-            return null;
-          },
+          validator: validator ??
+              (value) {
+                if (!readOnly && (value == null || value.isEmpty)) {
+                  return '$label tidak boleh kosong';
+                }
+                return null;
+              },
         ),
       ],
     );

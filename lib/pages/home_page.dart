@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:jelajahin_apps/main.dart'; // Untuk AppColors
+import 'package:jelajahin_apps/theme/colors.dart';
 import 'package:jelajahin_apps/pages/search_screen.dart';
-import 'package:jelajahin_apps/pages/destination_detail_page.dart'; // Jika masih dibutuhkan
-import 'package:jelajahin_apps/pages/top_places_screen.dart'; // Jika masih dibutuhkan
-import 'package:jelajahin_apps/widgets/post_card.dart'; // Import PostCard yang baru
-import 'dart:developer' as developer;
+import 'package:jelajahin_apps/pages/destination_detail_page.dart';
+import 'package:jelajahin_apps/widgets/post_card.dart'; // Pastikan path ini benar
+import 'dart:developer' as developer; // Untuk logging
 
 class HomeContentPage extends StatefulWidget {
   const HomeContentPage({super.key});
@@ -17,11 +16,9 @@ class HomeContentPage extends StatefulWidget {
 
 class _HomeContentPageState extends State<HomeContentPage> {
   User? _currentUser;
-  
-  // _isLoadingDestinations tidak lagi diperlukan karena menggunakan dummy data
-  // bool _isLoadingDestinations = false; 
+  Stream<List<Map<String, dynamic>>>? _allPostsStream; // Stream untuk semua postingan
 
-  // Categories (ini tetap statis atau bisa juga diambil dari Firestore jika ada koleksi kategori)
+  // Data kategori (opsional, jika Anda ingin mengaktifkannya kembali nanti)
   final List<Map<String, dynamic>> categories = [
     {
       'name': 'Restaurants',
@@ -45,93 +42,49 @@ class _HomeContentPageState extends State<HomeContentPage> {
     },
   ];
 
-  // --- DATA DUMMY UNTUK POSTINGAN USER LAIN ---
-  final List<Map<String, dynamic>> _otherUsersPosts = [
-    {
-      "id": "post_home_1",
-      "name": "Floating Market Lembang",
-      "location": "Lembang, Jawa Barat",
-      "description": "Pasar terapung unik dengan berbagai kuliner dan wahana air. Pengalaman yang menyenangkan untuk keluarga.",
-      "image": "https://picsum.photos/seed/floatingmarket/400/250",
-      "lat": -6.8181,
-      "lng": 107.6166,
-      "rating": 4.2,
-      "tags": ["pasar", "kuliner", "keluarga"],
-      "createdAt": "2024-06-15T09:00:00Z",
-      "userId": "other_user_id_A",
-      "ownerName": "Traveler Sejati",
-      "ownerAvatar": "https://picsum.photos/seed/avatar1/50/50",
-      "reviews": 85,
-      "commentsCount": 15
-    },
-    {
-      "id": "post_home_2",
-      "name": "Kebun Raya Bogor",
-      "location": "Bogor, Jawa Barat",
-      "description": "Area hijau luas yang ideal untuk bersantai dan belajar tentang berbagai jenis tumbuhan. Sangat sejuk dan menenangkan.",
-      "image": "https://picsum.photos/seed/kebunraya/400/250",
-      "lat": -6.5980,
-      "lng": 106.7997,
-      "rating": 4.4,
-      "tags": ["taman", "alam", "edukasi", "sejuk"],
-      "createdAt": "2024-06-14T18:00:00Z",
-      "userId": "other_user_id_B",
-      "ownerName": "Pecinta Alam",
-      "ownerAvatar": "https://picsum.photos/seed/avatar2/50/50",
-      "reviews": 150,
-      "commentsCount": 40
-    },
-    {
-      "id": "post_home_3",
-      "name": "Taman Safari Indonesia",
-      "location": "Bogor, Jawa Barat",
-      "description": "Berinteraksi langsung dengan satwa liar dari berbagai benua dalam suasana yang alami dan terawat. Cocok untuk semua usia.",
-      "image": "https://picsum.photos/seed/tamansafari/400/250",
-      "lat": -6.7020,
-      "lng": 106.9020,
-      "rating": 4.6,
-      "tags": ["hewan", "safari", "keluarga", "edukasi"],
-      "createdAt": "2024-06-13T11:30:00Z",
-      "userId": "other_user_id_C",
-      "ownerName": "Safari Mania",
-      "ownerAvatar": "https://picsum.photos/seed/avatar3/50/50",
-      "reviews": 210,
-      "commentsCount": 65
-    },
-    {
-      "id": "post_home_4",
-      "name": "Museum Angkut",
-      "location": "Batu, Jawa Timur",
-      "description": "Museum transportasi modern dengan koleksi kendaraan dari berbagai era dan negara. Banyak spot foto instagramable!",
-      "image": "https://picsum.photos/seed/museumangkut/400/250",
-      "lat": -7.8812,
-      "lng": 112.5221,
-      "rating": 4.5,
-      "tags": ["museum", "transportasi", "sejarah", "foto"],
-      "createdAt": "2024-06-12T15:00:00Z",
-      "userId": "other_user_id_D",
-      "ownerName": "Explore Mania",
-      "ownerAvatar": "https://picsum.photos/seed/avatar4/50/50",
-      "reviews": 190,
-      "commentsCount": 50
-    },
-  ];
-  // --- AKHIR DATA DUMMY ---
-
   @override
   void initState() {
     super.initState();
+    // Mendapatkan user saat ini saat inisialisasi
     _currentUser = FirebaseAuth.instance.currentUser;
+    // Setup stream untuk fetching postingan
+    _setupAllPostsStream();
 
+    // Mendengarkan perubahan status autentikasi
     FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (mounted) {
+      if (mounted) { // Pastikan widget masih ada di tree
         setState(() {
           _currentUser = user;
         });
+        _setupAllPostsStream(); // Muat ulang stream jika status auth berubah (misal: user login/logout)
       }
     });
   }
 
+  // Fungsi untuk menyiapkan stream semua postingan dari Firestore
+  void _setupAllPostsStream() {
+    developer.log('Home: Setting up all posts stream...');
+    _allPostsStream = FirebaseFirestore.instance
+        .collection('destinations')
+        // Urutkan berdasarkan waktu pembuatan terbaru
+        // Pastikan field 'createdAt' ada di dokumen destinasi Anda dengan FieldValue.serverTimestamp()
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return {
+                'id': doc.id, // Pastikan ID dokumen disertakan
+                ...data,
+                // Ambil ownerName dan ownerAvatar dari data dokumen
+                // Gunakan fallback 'Anonim' dan placeholder jika tidak ada
+                'ownerName': data['ownerName'] ?? 'Anonim',
+                'ownerAvatar': data['ownerAvatar'] ?? 'https://via.placeholder.com/50',
+              };
+            }).toList());
+    developer.log('Home: All posts stream setup complete.');
+  }
+
+  // Fungsi untuk mendapatkan sapaan berdasarkan waktu
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
@@ -159,11 +112,9 @@ class _HomeContentPageState extends State<HomeContentPage> {
               const SizedBox(height: 24),
               _buildSearchBar(),
               const SizedBox(height: 24),
-              // _buildCategoriesSection(textTheme),
-              const SizedBox(height: 24),
-              // --- Bagian Postingan dari User Lain (Dummy) ---
-              _buildOtherUsersPostsSection(textTheme),
-              // --- AKHIR Bagian Postingan User Lain ---
+              // _buildCategoriesSection(textTheme), // Uncomment jika ingin pakai kategori
+              // const SizedBox(height: 24),
+              _buildRecentPostsSection(textTheme),
               const SizedBox(height: 20),
             ],
           ),
@@ -188,6 +139,7 @@ class _HomeContentPageState extends State<HomeContentPage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
+                  // Menampilkan displayName dari user, atau 'Guest' jika belum login
                   'Halo, ${_currentUser?.displayName ?? 'Guest'}',
                   style: textTheme.headlineSmall?.copyWith(
                     color: AppColors.primaryDark,
@@ -261,122 +213,80 @@ class _HomeContentPageState extends State<HomeContentPage> {
     );
   }
 
-  // Widget _buildCategoriesSection(TextTheme textTheme) {
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       Row(
-  //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //         children: [
-  //           Text(
-  //             'Categories',
-  //             style: textTheme.titleLarge?.copyWith(
-  //               color: AppColors.primaryDark,
-  //               fontWeight: FontWeight.bold,
-  //             ),
-  //           ),
-  //           TextButton(
-  //             onPressed: () {
-  //               Navigator.push(
-  //                 context,
-  //                 MaterialPageRoute(builder: (context) => const TopPlacesScreen()),
-  //               );
-  //             },
-  //             child: Text(
-  //               'Show all',
-  //               style: TextStyle(color: AppColors.lightTeal),
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //       const SizedBox(height: 16),
-  //       Row(
-  //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //         children: categories.map((category) => _buildCategoryItem(category)).toList(),
-  //       ),
-  //     ],
-  //   );
-  // }
-
-  // Widget _buildCategoryItem(Map<String, dynamic> category) {
-  //   return Column(
-  //     children: [
-  //       Container(
-  //         width: 64,
-  //         height: 64,
-  //         decoration: BoxDecoration(
-  //           color: category['color'].withOpacity(0.1),
-  //           borderRadius: BorderRadius.circular(16),
-  //         ),
-  //         child: Icon(
-  //           category['icon'],
-  //           color: category['color'],
-  //           size: 32,
-  //         ),
-  //       ),
-  //       const SizedBox(height: 8),
-  //       Text(
-  //         category['name'],
-  //         style: TextStyle(
-  //           color: AppColors.primaryDark,
-  //           fontSize: 12,
-  //           fontWeight: FontWeight.w500,
-  //         ),
-  //         textAlign: TextAlign.center,
-  //       ),
-  //     ],
-  //   );
-  // }
-
-  // --- Bagian Baru: Postingan dari User Lain (menggunakan dummy data) ---
-  Widget _buildOtherUsersPostsSection(TextTheme textTheme) {
+  // Bagian untuk menampilkan postingan terbaru dari Firestore
+  Widget _buildRecentPostsSection(TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Recent Posts', // Anda bisa ganti judul ini sesuai kebutuhan
+          'Recent Posts', // Judul untuk semua postingan
           style: textTheme.titleLarge?.copyWith(
             color: AppColors.primaryDark,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 16),
-        // Langsung tampilkan ListView.builder atau pesan "tidak ada postingan"
-        _otherUsersPosts.isEmpty
-            ? Center(
+        StreamBuilder<List<Map<String, dynamic>>>(
+          stream: _allPostsStream, // Menggunakan stream dari Firestore
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              developer.log("Home: Error loading posts: ${snapshot.error}");
+              return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Text(
-                    'Tidak ada postingan baru ditemukan.',
+                    'Gagal memuat postingan: ${snapshot.error}',
                     textAlign: TextAlign.center,
-                    style: textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    style: textTheme.titleMedium?.copyWith(color: Colors.red),
                   ),
                 ),
-              )
-            : ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _otherUsersPosts.length,
-                itemBuilder: (context, index) {
-                  final postData = _otherUsersPosts[index];
-                  return PostCard(
-                    postData: postData,
-                    ownerName: postData['ownerName'] ?? 'Anonim', // Mengambil nama pemilik dari dummy data
-                    ownerAvatar: postData['ownerAvatar'] ?? 'https://via.placeholder.com/50', // Mengambil avatar pemilik dari dummy data
-                    onTap: () { // <-- Tambahkan onTap untuk navigasi
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DestinationDetailPage(destination: postData),
-                        ),
-                      );
-                    },
-                    // onDelete TIDAK DITERUSKAN di sini.
-                    // Karena onDelete di PostCard bersifat opsional, tidak perlu meneruskannya di sini.
-                    // Ini akan membuat tombol 3 titik (opsi delete) tidak muncul di HomeContentPage.
-                  );
-                },
-              ),
+              );
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Text(
+                    'Tidak ada postingan yang tersedia.',
+                    textAlign: TextAlign.center,
+                    style: textTheme.titleMedium?.copyWith(color: AppColors.grey),
+                  ),
+                ),
+              );
+            }
+
+            final List<Map<String, dynamic>> posts = snapshot.data!;
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(), // Penting agar tidak scroll sendiri
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                final postData = posts[index];
+                return PostCard(
+                  postData: postData,
+                  // Mengambil ownerName dan ownerAvatar dari data postingan yang sudah diproses di stream
+                  // Ini akan menggunakan nilai dari Firestore atau fallback 'Anonim' / placeholder
+                  ownerName: postData['ownerName'],
+                  ownerAvatar: postData['ownerAvatar'],
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DestinationDetailPage(destination: postData),
+                      ),
+                    );
+                  },
+                  // onDelete TIDAK perlu diteruskan di sini jika PostCard ini hanya untuk tampilan
+                  // dan bukan untuk user yang bisa menghapus postingan orang lain di Home.
+                  // onDelete: _deletePost, // Hapus atau komen baris ini jika tidak relevan
+                );
+              },
+            );
+          },
+        ),
       ],
     );
   }

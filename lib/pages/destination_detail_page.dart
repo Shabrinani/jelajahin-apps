@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import '../theme/colors.dart'; // for AppColors.primaryDark
-import 'package:cached_network_image/cached_network_image.dart'; // Untuk menampilkan gambar dari network dengan cache
+import '../theme/colors.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
+// Firebase imports
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // For getting current user info
 
 class DestinationDetailPage extends StatefulWidget {
   final Map<String, dynamic> destination;
@@ -14,41 +18,39 @@ class DestinationDetailPage extends StatefulWidget {
 }
 
 class _DestinationDetailPageState extends State<DestinationDetailPage> {
-  late bool isFavorite;
+  late bool isFavorite; // This will now represent the user's favorite status for this destination
   late ScrollController _scrollController;
   bool _isScrolled = false;
   final TextEditingController _commentController = TextEditingController();
 
-  // Data komentar dummy
-  final List<Map<String, String>> _comments = [
-    {
-      'profileImage': 'https://picsum.photos/seed/commenter1/50/50', // Ganti dengan URL gambar profil dummy yang valid
-      'name': 'Pengguna Keren',
-      'comment': 'Tempat ini terlihat sangat menarik!',
-    },
-    {
-      'profileImage': 'https://picsum.photos/seed/commenter2/50/50', // Ganti dengan URL gambar profil dummy yang valid
-      'name': 'Petualang Sejati',
-      'comment': 'Saya sudah pernah ke sini dan sangat merekomendasikannya!',
-    },
-    {
-      'profileImage': 'https://picsum.photos/seed/commenter3/50/50', // Ganti dengan URL gambar profil dummy yang valid
-      'name': 'Foodie Explorer',
-      'comment': 'Makanan di sekitar sini sangat lezat dan otentik!',
-    },
-  ];
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Stream to listen for comments in real-time
+  Stream<QuerySnapshot>? _commentsStream;
 
   @override
   void initState() {
     super.initState();
-    // isFavorite diinisialisasi dari data yang diterima
-    isFavorite = widget.destination['isFavorite'] ?? false;
+    // Assuming 'id' is a unique identifier for the destination in Firestore
+    // This `isFavorite` would ideally come from a user-specific 'favorites' collection
+    // For now, we'll keep it as a local state that would be updated in the backend.
+    isFavorite = widget.destination['isFavorite'] ?? false; // Initial dummy value, to be replaced by actual user data
+
     _scrollController = ScrollController();
     _scrollController.addListener(() {
       setState(() {
         _isScrolled = _scrollController.offset > 0;
       });
     });
+
+    // Initialize comments stream
+    _commentsStream = _firestore
+        .collection('destinations')
+        .doc(widget.destination['id']) // Use destination ID to fetch its comments
+        .collection('comments')
+        .orderBy('timestamp', descending: true) // Show newest comments first
+        .snapshots();
   }
 
   @override
@@ -58,94 +60,196 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
     super.dispose();
   }
 
-  void toggleFavorite() {
+  void toggleFavorite() async {
+    // Implement favorite toggle logic with Firestore
+    // This requires a 'users' collection with a 'favorites' subcollection
+    // or a 'favorites' collection that maps users to destinations.
+    // For simplicity, let's assume a 'userFavorites' collection where each doc is a user's ID
+    // and it contains a map of destination IDs they have favorited.
+
+    final user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Anda perlu login untuk menambahkan favorit.')),
+      );
+      return;
+    }
+
+    final destinationId = widget.destination['id'];
+    if (destinationId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID Destinasi tidak ditemukan.')),
+      );
+      return;
+    }
+
+    // Toggle local state immediately for a responsive UI
     setState(() {
       isFavorite = !isFavorite;
-      // Di sini Anda akan mengimplementasikan logika untuk menyimpan/menghapus dari database
-      // dan memperbarui status di aplikasi global Anda jika menggunakan provider/notifier.
-      // widget.destination['isFavorite'] = isFavorite; // Ini hanya mengubah data lokal widget, bukan database.
-      // Jika Anda menggunakan savedPostsNotifier, panggil fungsi seperti ini:
-      // if (isFavorite) {
-      //   savedPostsNotifier.value = List.from(savedPostsNotifier.value)..add(widget.destination);
-      // } else {
-      //   savedPostsNotifier.value = List.from(savedPostsNotifier.value)..removeWhere((post) => post['id'] == widget.destination['id']);
-      // }
     });
-    // Jika Anda ingin mengembalikan status favorite ke halaman sebelumnya (misal SavedPage)
-    // Navigator.of(context).pop(isFavorite);
+
+    try {
+      final userFavoriteDocRef = _firestore.collection('userFavorites').doc(user.uid);
+      if (isFavorite) {
+        await userFavoriteDocRef.set({
+          'favoritedDestinations': FieldValue.arrayUnion([destinationId]),
+        }, SetOptions(merge: true)); // Use merge: true to add without overwriting
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ditambahkan ke favorit!')),
+        );
+      } else {
+        await userFavoriteDocRef.update({
+          'favoritedDestinations': FieldValue.arrayRemove([destinationId]),
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dihapus dari favorit.')),
+        );
+      }
+    } catch (e) {
+      // Revert local state if backend update fails
+      setState(() {
+        isFavorite = !isFavorite;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memperbarui favorit: $e')),
+      );
+      print('Error toggling favorite: $e');
+    }
   }
+
+  // A function to check the favorite status from Firestore
+  Future<void> _checkFavoriteStatus() async {
+    final user = _auth.currentUser;
+    final destinationId = widget.destination['id'];
+
+    if (user == null || destinationId == null) {
+      setState(() {
+        isFavorite = false; // Not favorited if no user or no destination ID
+      });
+      return;
+    }
+
+    try {
+      final docSnapshot = await _firestore.collection('userFavorites').doc(user.uid).get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        final List<dynamic>? favoritedDestinations = data?['favoritedDestinations'];
+        if (favoritedDestinations != null && favoritedDestinations.contains(destinationId)) {
+          setState(() {
+            isFavorite = true;
+          });
+        } else {
+          setState(() {
+            isFavorite = false;
+          });
+        }
+      } else {
+        setState(() {
+          isFavorite = false;
+        });
+      }
+    } catch (e) {
+      print('Error checking favorite status: $e');
+      setState(() {
+        isFavorite = false; // Default to not favorited on error
+      });
+    }
+  }
+
 
   Future<bool> _onWillPop() async {
-    // Mengembalikan status `isFavorite` saat kembali ke halaman sebelumnya
+    // Return the final `isFavorite` status when navigating back
     Navigator.of(context).pop(isFavorite);
-    return false; // Mencegah pop default karena kita sudah melakukan pop manual
+    return false; // Prevent default pop as we've handled it manually
   }
 
-  void _addComment() {
+  void _addComment() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Anda perlu login untuk menambahkan komentar.')),
+      );
+      return;
+    }
+
     if (_commentController.text.trim().isNotEmpty) {
-      setState(() {
-        _comments.add({
-          'profileImage': 'https://picsum.photos/seed/currentuser/50/50', // URL gambar profil dummy user saat ini
-          'name': 'Anda', // Nama user saat ini (bisa diganti dengan _currentUser.displayName jika sudah ada)
-          'comment': _commentController.text.trim(),
+      try {
+        final String? userName = user.displayName ?? user.email?.split('@')[0] ?? 'Anonim';
+        final String? userAvatar = user.photoURL ?? 'https://picsum.photos/seed/${user.uid}/50/50'; // Fallback dummy avatar
+
+        await _firestore
+            .collection('destinations')
+            .doc(widget.destination['id'])
+            .collection('comments')
+            .add({
+          'userId': user.uid,
+          'userName': userName,
+          'userAvatar': userAvatar,
+          'content': _commentController.text.trim(),
+          'timestamp': FieldValue.serverTimestamp(), // Use server timestamp for consistency
         });
         _commentController.clear();
-        // Di sini Anda akan mengimplementasikan penyimpanan komentar ke database (misalnya Firestore)
-        // Contoh:
-        // FirebaseFirestore.instance.collection('destinations').doc(widget.destination['id']).collection('comments').add({
-        //   'userId': FirebaseAuth.instance.currentUser?.uid,
-        //   'userName': 'Nama User Saat Ini',
-        //   'userAvatar': 'URL Avatar User',
-        //   'content': _commentController.text.trim(),
-        //   'timestamp': FieldValue.serverTimestamp(),
-        // });
-      });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menambahkan komentar: $e')),
+        );
+        print('Error adding comment: $e');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Ambil data dari widget.destination, berikan nilai default jika null
     final String imageUrl = widget.destination['image'] as String? ?? 'https://via.placeholder.com/400x250';
     final String destinationName = widget.destination['name'] as String? ?? 'Nama Destinasi';
     final String destinationLocation = widget.destination['location'] as String? ?? 'Lokasi Tidak Diketahui';
     final String destinationDescription = widget.destination['description'] as String? ?? 'Tidak ada deskripsi.';
     final double destinationRating = (widget.destination['rating'] as num?)?.toDouble() ?? 0.0;
-    // int destinationReviews = widget.destination['reviews'] as int? ?? 0; // Jika ada jumlah reviews di data
 
     final lat = widget.destination['latitude'] as double?;
     final lng = widget.destination['longitude'] as double?;
-    final LatLng? destinationLatLng =
-        (lat != null && lng != null) ? LatLng(lat, lng) : null;
+    final LatLng? destinationLatLng = (lat != null && lng != null) ? LatLng(lat, lng) : null;
 
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor:
-              _isScrolled ? AppColors.darkTeal : AppColors.white,
-          elevation: 0,
+          backgroundColor: _isScrolled ? AppColors.darkTeal : Colors.transparent,
+          elevation: _isScrolled ? 4 : 0,
           leading: BackButton(
-            color: _isScrolled ? Colors.white : AppColors.primaryDark,
+            color: _isScrolled ? AppColors.white : AppColors.primaryDark,
           ),
-          title: Text(
-            destinationName, // Judul AppBar adalah nama destinasi
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: _isScrolled ? Colors.white : AppColors.primaryDark,
-                ),
-            maxLines: 1, // Agar judul tidak terlalu panjang
-            overflow: TextOverflow.ellipsis,
+          title: AnimatedOpacity(
+            opacity: _isScrolled ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              destinationName,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: _isScrolled ? AppColors.white : AppColors.primaryDark,
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           centerTitle: true,
+          actions: [
+            IconButton(
+              icon: Icon(
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: isFavorite ? Colors.red : (_isScrolled ? AppColors.white : AppColors.primaryDark),
+              ),
+              onPressed: toggleFavorite,
+            ),
+            const SizedBox(width: 8),
+          ],
         ),
         body: SingleChildScrollView(
           controller: _scrollController,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Gambar Destinasi - menggunakan CachedNetworkImage
               CachedNetworkImage(
                 imageUrl: imageUrl,
                 height: 240,
@@ -163,12 +267,7 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.only(
-                  top: 16.0,
-                  left: 16.0,
-                  right: 16.0,
-                  bottom: 8,
-                ),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -179,26 +278,11 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                           child: Text(
                             destinationName,
                             style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                                ?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primaryDark),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        // GestureDetector(
-                        //   onTap: toggleFavorite, // Panggil fungsi toggleFavorite
-                        //   child: CircleAvatar(
-                        //     backgroundColor: Colors.white,
-                        //     radius: 18,
-                        //     child: Icon(
-                        //       isFavorite // Menggunakan isFavorite lokal
-                        //           ? Icons.favorite
-                        //           : Icons.favorite_border,
-                        //       color: isFavorite ? Colors.red : Colors.grey,
-                        //       size: 24,
-                        //     ),
-                        //   ),
-                        // ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -210,30 +294,25 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                           color: Colors.grey,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          destinationLocation,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
+                        Expanded(
+                          child: Text(
+                            destinationLocation,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Garis Divider setelah lokasi
-                    // const Divider(
-                    //   color: Colors.grey,
-                    //   thickness: 0.5,
-                    // ),
-                    // const SizedBox(height: 12),
                     Row(
                       children: [
                         const Icon(Icons.star, color: Colors.amber, size: 20),
                         const SizedBox(width: 4),
-                        Text('${destinationRating}'),
-                        // Tambahkan reviews jika ada di data
-                        // const SizedBox(width: 4),
-                        // Text('($destinationReviews reviews)'),
+                        Text('${destinationRating.toStringAsFixed(1)}'),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -242,13 +321,13 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 20),
-                    // Bagian Peta
                     if (destinationLatLng != null) ...[
                       const Text(
                         "Location",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
+                          color: AppColors.primaryDark,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -257,6 +336,14 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           color: Colors.grey.shade200,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              spreadRadius: 2,
+                              blurRadius: 5,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
@@ -264,13 +351,12 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                             options: MapOptions(
                               center: destinationLatLng,
                               zoom: 15,
+                              interactiveFlags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                             ),
                             children: [
                               TileLayer(
-                                urlTemplate:
-                                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                userAgentPackageName:
-                                    'com.example.jelajahin_apps',
+                                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                userAgentPackageName: 'com.example.jelajahin_apps',
                               ),
                               MarkerLayer(
                                 markers: [
@@ -295,87 +381,116 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                     const Divider(
                       color: Colors.grey,
                       thickness: 0.5,
+                      height: 30,
                     ),
 
-                    // --- BAGIAN KOMENTAR ---
+                    // --- COMMENTS SECTION ---
                     const Text(
                       "Komentar",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: AppColors.primaryDark,
                       ),
                     ),
                     const SizedBox(height: 8),
 
-                    // Daftar Komentar
-                    _comments.isEmpty
-                        ? Padding(
+                    // Listen to Firestore stream for comments
+                    StreamBuilder<QuerySnapshot>(
+                      stream: _commentsStream,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Center(child: CircularProgressIndicator(color: AppColors.lightTeal));
+                        }
+                        if (snapshot.hasError) {
+                          return Text('Error loading comments: ${snapshot.error}');
+                        }
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
                             child: Text(
                               'Belum ada komentar. Jadilah yang pertama!',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                             ),
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _comments.length,
-                            itemBuilder: (context, index) {
-                              final comment = _comments[_comments.length - 1 - index]; // Tampilkan komentar terbaru di atas
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12.0),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 18,
-                                      backgroundImage: NetworkImage(comment['profileImage']!),
-                                      backgroundColor: Colors.grey[200],
+                          );
+                        }
+
+                        // Display comments
+                        final comments = snapshot.data!.docs;
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: comments.length,
+                          itemBuilder: (context, index) {
+                            final commentData = comments[index].data() as Map<String, dynamic>;
+                            final String commentUserName = commentData['userName'] ?? 'Anonim';
+                            final String commentUserAvatar = commentData['userAvatar'] ?? 'https://picsum.photos/seed/defaultavatar/50/50';
+                            final String commentContent = commentData['content'] ?? 'No content';
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundImage: CachedNetworkImageProvider(commentUserAvatar),
+                                    backgroundColor: Colors.grey[200],
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          commentUserName,
+                                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.primaryDark,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          commentContent,
+                                          style: Theme.of(context).textTheme.bodyMedium,
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            comment['name']!,
-                                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: AppColors.primaryDark,
-                                                ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            comment['comment']!,
-                                            style: Theme.of(context).textTheme.bodyMedium,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                     const SizedBox(height: 20),
 
-                    // Section Tambah Komentar
+                    // Add Comment Section
                     const Text(
                       "Tambahkan Komentar",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: AppColors.primaryDark,
                       ),
                     ),
                     const SizedBox(height: 12),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Avatar user saat ini (dummy)
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundImage: NetworkImage('https://picsum.photos/seed/youruser/50/50'), // Ganti dengan URL avatar user saat ini
-                          backgroundColor: Colors.grey[200],
+                        // Display current user's avatar if logged in
+                        StreamBuilder<User?>(
+                          stream: _auth.authStateChanges(),
+                          builder: (context, snapshot) {
+                            final User? user = snapshot.data;
+                            final String avatarUrl = user?.photoURL ?? 'https://picsum.photos/seed/guest/50/50';
+                            return CircleAvatar(
+                              radius: 20,
+                              backgroundImage: CachedNetworkImageProvider(avatarUrl),
+                              backgroundColor: Colors.grey[200],
+                            );
+                          },
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -391,7 +506,8 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                               fillColor: Colors.grey[100],
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             ),
-                            maxLines: null, // Biarkan textfield memanjang sesuai isi
+                            maxLines: null,
+                            keyboardType: TextInputType.multiline,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -402,7 +518,7 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20), // Jarak di bagian bawah
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
