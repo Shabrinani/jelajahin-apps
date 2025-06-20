@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:jelajahin_apps/pages/notification_page.dart';
 import 'package:jelajahin_apps/theme/colors.dart';
 import 'package:jelajahin_apps/pages/search_screen.dart';
 import 'package:jelajahin_apps/pages/destination_detail_page.dart';
@@ -168,9 +169,10 @@ class _HomeContentPageState extends State<HomeContentPage> {
               size: 24,
             ),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifications coming soon!')),
-              );
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const NotificationPage()),
+                );
             },
           ),
         ),
