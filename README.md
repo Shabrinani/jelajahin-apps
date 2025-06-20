@@ -20,5 +20,3 @@
 * Kayla Kirani Kusnadi (5026221111)
 * Aufaa Hafizhah B (5026221113)
 * Alexander Satryo P (5026221135)
-
----
