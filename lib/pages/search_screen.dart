@@ -1,4 +1,6 @@
 // lib/pages/search_screen.dart
+// ignore_for_file: prefer_const_constructors, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:jelajahin_apps/main.dart'; // For AppColors
 import 'package:jelajahin_apps/pages/destination_detail_page.dart';
@@ -43,42 +45,6 @@ class _SearchScreenState extends State<SearchScreen> {
       "image": "https://picsum.photos/seed/searchcity1/400/250",
       "reviews": 200, "commentsCount": 50,
       "ownerName": "Sejarahwan C", "ownerAvatar": "https://picsum.photos/seed/ava3/50/50"
-    },
-    {
-      "id": "search_post_4",
-      "name": "Restoran Seafood Jaya",
-      "location": "Denpasar, Bali",
-      "description": "Restoran seafood terbaik dengan pemandangan laut.",
-      "image": "https://picsum.photos/seed/searchrestaurant1/400/250",
-      "reviews": 150, "commentsCount": 45,
-      "ownerName": "Foodie D", "ownerAvatar": "https://picsum.photos/seed/ava4/50/50"
-    },
-    {
-      "id": "search_post_5",
-      "name": "Museum Nasional",
-      "location": "Jakarta, Indonesia",
-      "description": "Koleksi artefak budaya dan sejarah Indonesia.",
-      "image": "https://picsum.photos/seed/searchmuseum1/400/250",
-      "reviews": 90, "commentsCount": 25,
-      "ownerName": "Pustakawan E", "ownerAvatar": "https://picsum.photos/seed/ava5/50/50"
-    },
-    {
-      "id": "search_post_6",
-      "name": "Gunung Merapi",
-      "location": "Yogyakarta, Indonesia",
-      "description": "Gunung berapi aktif yang megah.",
-      "image": "https://picsum.photos/seed/searchmountain2/400/250",
-      "reviews": 110, "commentsCount": 30,
-      "ownerName": "Petualang F", "ownerAvatar": "https://picsum.photos/seed/ava6/50/50"
-    },
-     {
-      "id": "search_post_7",
-      "name": "Pantai Sanur",
-      "location": "Bali, Indonesia",
-      "description": "Pantai indah untuk menikmati sunrise.",
-      "image": "https://picsum.photos/seed/beach2/400/250",
-      "reviews": 95, "commentsCount": 18,
-      "ownerName": "Fotografer G", "ownerAvatar": "https://picsum.photos/seed/ava7/50/50"
     },
   ];
 

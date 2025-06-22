@@ -1,6 +1,9 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:jelajahin_apps/main.dart';
 import 'package:jelajahin_apps/pages/destination_detail_page.dart'
+    // ignore: library_prefixes
     as DetailPage;
 
 class TopPlacesScreen extends StatefulWidget {
@@ -139,7 +142,7 @@ class _TopPlacesScreenState extends State<TopPlacesScreen> {
       backgroundColor: AppColors.white,
       elevation: 0,
       leading: IconButton(
-        icon: Icon(Icons.arrow_back, color: AppColors.primaryDark),
+        icon: const Icon(Icons.arrow_back, color: AppColors.primaryDark),
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
@@ -152,7 +155,7 @@ class _TopPlacesScreenState extends State<TopPlacesScreen> {
       centerTitle: true,
       actions: [
         IconButton(
-          icon: Icon(Icons.share, color: AppColors.primaryDark),
+          icon: const Icon(Icons.share, color: AppColors.primaryDark),
           onPressed: () {},
         ),
       ],
@@ -237,7 +240,7 @@ class _TopPlacesScreenState extends State<TopPlacesScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [AppColors.lightTeal, AppColors.darkTeal],
@@ -287,7 +290,7 @@ class _TopPlacesScreenState extends State<TopPlacesScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.emoji_events, color: Colors.white, size: 16),
+                    const Icon(Icons.emoji_events, color: Colors.white, size: 16),
                     const SizedBox(width: 4),
                     Text(
                       '#${champion['rank']} Champion',
@@ -313,7 +316,7 @@ class _TopPlacesScreenState extends State<TopPlacesScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.trending_up, color: Colors.white, size: 12),
+                    const Icon(Icons.trending_up, color: Colors.white, size: 12),
                     const SizedBox(width: 2),
                     Text(
                       champion['trendPercent'],
@@ -351,7 +354,7 @@ class _TopPlacesScreenState extends State<TopPlacesScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.star, color: Colors.amber, size: 16),
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
                       const SizedBox(width: 4),
                       Text(
                         '${champion['rating']}',
@@ -516,7 +519,7 @@ class _TopPlacesScreenState extends State<TopPlacesScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.star, size: 12, color: Colors.amber),
+                      const Icon(Icons.star, size: 12, color: Colors.amber),
                       const SizedBox(width: 2),
                       Text(
                         '${destination['rating']}',
@@ -610,7 +613,7 @@ class _TopPlacesScreenState extends State<TopPlacesScreen> {
               child: Center(
                 child: Text(
                   '#${destination['rank']}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppColors.lightTeal,
                     fontSize: 16,
@@ -674,7 +677,7 @@ class _TopPlacesScreenState extends State<TopPlacesScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.star, size: 14, color: Colors.amber),
+                      const Icon(Icons.star, size: 14, color: Colors.amber),
                       const SizedBox(width: 4),
                       Text(
                         '${destination['rating']}',
@@ -723,7 +726,7 @@ class _TopPlacesScreenState extends State<TopPlacesScreen> {
               children: [
                 Text(
                   destination['price'],
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.lightTeal,
                     fontWeight: FontWeight.w600,

@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:jelajahin_apps/services/firestore_service.dart'; // Import service baru
@@ -157,27 +159,10 @@ class _RegisterPageState extends State<RegisterPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Logo
-              Container(
+              Image.asset(
+                'images/logo_jelajahin.png',
                 width: 100,
                 height: 100,
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Image.asset(
-                    'images/logo_jelajahin.png',
-                    width: 70,
-                    height: 70,
-                  ),
-                ),
               ),
               const SizedBox(height: 30),
 

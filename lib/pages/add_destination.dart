@@ -287,7 +287,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
                 : const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Icon(Icons.camera_alt_outlined, size: 50, color: Colors.grey), // DIUBAH
                       SizedBox(height: 12),
-                      Text('Ketuk untuk memilih gambar', style: TextStyle(color: Colors.grey, fontSize: 16)), // DIUBAH
+                      Text('Tap to select an image', style: TextStyle(color: Colors.grey, fontSize: 16)), // DIUBAH
                     ])),
           ),
         ),
@@ -298,17 +298,17 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(children: [
-            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Nama Tempat', prefixIcon: Icon(Icons.place_outlined)), validator: (v) => v!.isEmpty ? 'Nama tempat wajib diisi' : null),
+            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Place Name', prefixIcon: Icon(Icons.place_outlined)), validator: (v) => v!.isEmpty ? 'Nama tempat wajib diisi' : null),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedCategory,
-              decoration: const InputDecoration(labelText: 'Kategori', prefixIcon: Icon(Icons.category_outlined)),
+              decoration: const InputDecoration(labelText: 'Category', prefixIcon: Icon(Icons.category_outlined)),
               items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
               onChanged: (v) => setState(() => _selectedCategory = v),
-              validator: (v) => v == null ? 'Kategori wajib dipilih' : null,
+              validator: (v) => v == null ? 'Category is required' : null,
             ),
             const SizedBox(height: 16),
-            TextFormField(controller: _descriptionController, decoration: const InputDecoration(labelText: 'Deskripsi', prefixIcon: Icon(Icons.description_outlined)), maxLines: 4, validator: (v) => v!.isEmpty ? 'Deskripsi wajib diisi' : null),
+            TextFormField(controller: _descriptionController, decoration: const InputDecoration(labelText: 'Description', prefixIcon: Icon(Icons.description_outlined)), maxLines: 4, validator: (v) => v!.isEmpty ? 'Deskripsi wajib diisi' : null),
           ]),
         ),
       );

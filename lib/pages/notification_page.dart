@@ -56,7 +56,10 @@ class _NotificationPageState extends State<NotificationPage>
       backgroundColor: AppColors.white,
       appBar: AppBar(
         backgroundColor: AppColors.white,
-        title: const Text('Notifikasi'),
+        title: const Text(
+          'Notifications',
+          style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
@@ -64,9 +67,9 @@ class _NotificationPageState extends State<NotificationPage>
           unselectedLabelColor: Colors.grey,
           indicatorColor: AppColors.primaryDark,
           tabs: const [
-            Tab(text: 'Semua'),
-            Tab(text: 'Sistem'),
-            Tab(text: 'Pengguna'),
+            Tab(text: 'All'),
+            Tab(text: 'System'),
+            Tab(text: 'User'),
           ],
         ),
       ),

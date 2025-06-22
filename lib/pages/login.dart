@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:jelajahin_apps/pages/main_navigation.dart'; // <-- DIUBAH: Mengarah ke main_navigation.dart
+import 'package:jelajahin_apps/pages/main_navigation.dart';
 import 'package:jelajahin_apps/pages/register.dart';
 import 'package:jelajahin_apps/services/firestore_service.dart';
 import 'package:jelajahin_apps/theme/colors.dart';
@@ -293,47 +293,48 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Checkbox(
-                          value: rememberMe,
-                          onChanged: (bool? newValue) {
-                            setState(() {
-                              rememberMe = newValue!;
-                            });
-                          },
-                          activeColor: AppColors.lightTeal,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                      Text(
-                        'Keep me signed in',
-                        style: textTheme.bodySmall?.copyWith(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                  TextButton(
-                    onPressed: _resetPassword,
-                    child: Text(
-                      'Forgot password?',
-                      style: textTheme.labelSmall?.copyWith(
-                        fontSize: 14,
-                        color: AppColors.lightTeal,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //   children: [
+              //     // --
+              //     Row(
+              //       children: [
+              //         SizedBox(
+              //           width: 24,
+              //           height: 24,
+              //           child: Checkbox(
+              //             value: rememberMe,
+              //             onChanged: (bool? newValue) {
+              //               setState(() {
+              //                 rememberMe = newValue!;
+              //               });
+              //             },
+              //             activeColor: AppColors.lightTeal,
+              //             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              //           ),
+              //         ),
+              //         Text(
+              //           'Keep me signed in',
+              //           style: textTheme.bodySmall?.copyWith(
+              //             fontSize: 14,
+              //             color: Colors.grey[700],
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //     TextButton(
+              //       onPressed: _resetPassword,
+              //       child: Text(
+              //         'Forgot password?',
+              //         style: textTheme.labelSmall?.copyWith(
+              //           fontSize: 14,
+              //           color: AppColors.lightTeal,
+              //           fontWeight: FontWeight.w600,
+              //         ),
+              //       ),
+              //     ),
+              //   ],
+              // ),
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,

@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:jelajahin_apps/pages/destination_detail_page.dart';
-import 'package:jelajahin_apps/pages/notification_page.dart';
 import 'package:jelajahin_apps/services/firestore_service.dart';
 import 'package:jelajahin_apps/theme/colors.dart';
 import 'package:jelajahin_apps/widgets/post_card.dart';
@@ -100,16 +99,6 @@ class _HomePageState extends State<HomePage> {
                 )),
               ],
             ),
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: AppColors.lightTeal.withOpacity(0.2),
-              child: IconButton(
-                icon: Icon(Icons.notifications_outlined, color: AppColors.darkTeal, size: 24),
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationPage()));
-                },
-              ),
-            ),
           ],
         );
       },
@@ -121,7 +110,7 @@ class _HomePageState extends State<HomePage> {
     return TextField(
       controller: _searchController,
       decoration: InputDecoration(
-        hintText: 'Cari destinasi...',
+        hintText: 'Search destination...',
         hintStyle: TextStyle(color: Colors.grey[600], fontSize: 16),
         prefixIcon: Icon(Icons.search, color: Colors.grey[600], size: 24),
         suffixIcon: _searchQuery.isNotEmpty

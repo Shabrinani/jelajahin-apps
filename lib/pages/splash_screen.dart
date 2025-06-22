@@ -1,9 +1,8 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:jelajahin_apps/pages/login.dart';
 import 'package:jelajahin_apps/main.dart'; // Import main.dart untuk mengakses AppColors
-
-// Tidak perlu mengimpor GoogleFonts secara eksplisit di sini lagi
-// karena kita akan mengandalkan pengaturan tema di main.dart.
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

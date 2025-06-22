@@ -1,14 +1,17 @@
+// ignore_for_file: prefer_const_constructors, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jelajahin_apps/pages/destination_detail_page.dart';
+import 'package:jelajahin_apps/pages/edit_destination_page.dart';
 import 'package:jelajahin_apps/theme/colors.dart';
 import 'package:jelajahin_apps/pages/login.dart';
 import 'package:jelajahin_apps/pages/edit_profile.dart';
 import 'package:jelajahin_apps/pages/settings.dart';
 import 'package:jelajahin_apps/widgets/post_card.dart';
 import 'package:jelajahin_apps/services/firestore_service.dart'; // <-- Import service
-import 'dart:developer' as developer;
+// import 'dart:developer' as developer;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -20,27 +23,6 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  // Fungsi untuk logout
-  Future<void> _logout() async {
-    try {
-      await _auth.signOut();
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-          (Route<dynamic> route) => false,
-        );
-      }
-    } catch (e) {
-      developer.log("ProfilePage: ERROR: Failed to logout: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal logout: ${e.toString()}")),
-        );
-      }
-    }
-  }
   
   // Fungsi untuk menghapus postingan
   Future<void> _deletePost(Map<String, dynamic> postToDelete) async {
@@ -51,13 +33,13 @@ class _ProfilePageState extends State<ProfilePage> {
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Postingan'),
-        content: Text('Apakah Anda yakin ingin menghapus "$postName"?'),
+        title: const Text('Delete Post'),
+        content: Text('Are you sure you want to delete "$postName"?'),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal')),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -68,13 +50,13 @@ class _ProfilePageState extends State<ProfilePage> {
         await _firestoreService.deleteDestination(postId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Postingan "$postName" berhasil dihapus.')),
+            SnackBar(content: Text('The post "$postName" has been deleted.')),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal menghapus postingan: $e')),
+            SnackBar(content: Text('Failed to delete the post: $e')),
           );
         }
       }
@@ -126,11 +108,11 @@ class _ProfilePageState extends State<ProfilePage> {
           return Center(child: Text('Error: ${userSnapshot.error}'));
         }
         if (!userSnapshot.data!.exists) {
-          return const Center(child: Text("Profil pengguna tidak ditemukan."));
+          return const Center(child: Text("User profile not found."));
         }
 
         final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-        final String userName = userData['name'] ?? 'Pengguna Jelajahin';
+        final String userName = userData['name'] ?? 'Jelajahin Users';
         final String profilePictureUrl = userData['profile_picture_url'] ?? '';
 
         return NestedScrollView(
@@ -191,24 +173,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
           const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _logout,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade400,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 44),
-            ),
-            child: const Text('Logout'),
-          ),
-          const SizedBox(height: 20),
-          const Divider(height: 1, thickness: 1, color: AppColors.grey),
-           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20.0),
-            child: Text(
-              'My Posts',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primaryDark),
-            ),
-          ),
           const Divider(height: 1, thickness: 1, color: AppColors.grey),
         ],
       ),
@@ -223,10 +187,10 @@ class _ProfilePageState extends State<ProfilePage> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text("Gagal memuat postingan: ${snapshot.error}"));
+          return Center(child: Text("Failed to load the post: ${snapshot.error}"));
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text("Anda belum membuat postingan apapun."));
+          return const Center(child: Text("No posts yet. Create your first post!"));
         }
         
         final posts = snapshot.data!;
@@ -246,6 +210,17 @@ class _ProfilePageState extends State<ProfilePage> {
                   MaterialPageRoute(builder: (context) => DestinationDetailPage(destination: postData)),
                 );
               },
+              // --- INI BARIS KUNCI YANG PERLU ANDA TAMBAHKAN ---
+              // Solusi Cepat: Pastikan Anda mengirim 'destination: postData'
+              onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DestinationDetailPage(destination: postData),
+                  ),
+                );
+              },
+              // ----------------------------------------------------
             );
           },
         );
@@ -263,13 +238,13 @@ class _ProfilePageState extends State<ProfilePage> {
             const Icon(Icons.person_off_outlined, size: 80, color: Colors.grey),
             const SizedBox(height: 20),
             const Text(
-              'Akses Fitur Profil',
+              'Profile Access',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              'Login untuk melihat profil Anda dan postingan yang telah dibuat.',
+              'Log in to access your profile and see your posts.',
               style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),

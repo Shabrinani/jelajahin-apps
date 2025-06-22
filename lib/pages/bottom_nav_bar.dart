@@ -22,7 +22,7 @@ class CustomBottomNavBar extends StatelessWidget {
       showUnselectedLabels: false,
       currentIndex: selectedIndex,
       onTap: onItemTapped,
-      items: [
+      items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined),
           activeIcon: Icon(Icons.home),

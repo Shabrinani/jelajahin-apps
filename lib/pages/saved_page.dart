@@ -23,7 +23,7 @@ class _SavedPageState extends State<SavedPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Postingan Tersimpan',
+          'Saved Posts',
           style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.white,

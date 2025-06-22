@@ -134,6 +134,12 @@ class FirestoreService {
     await _db.collection('destinations').doc(destinationId).update(data);
   }
 
+  // Di dalam FirestoreService
+  Future<DocumentSnapshot> getDestinationById(String destinationId) {
+  // Gunakan .get() untuk mengambil data SATU KALI.
+  return _db.collection('destinations').doc(destinationId).get();
+  }
+
   Future<void> deleteDestination(String destinationId) async {
     // TODO: Hapus juga gambar dari Firebase Storage dan sub-koleksi komentar
     await _db.collection('destinations').doc(destinationId).delete();
@@ -244,27 +250,42 @@ class FirestoreService {
   }
 
   // Fungsi ini sudah benar, yaitu menaikkan `commentCount` setiap kali ada comment baru.
-  Future<void> addComment(
-      {required String noteId,
-      required String text,
-      required String userId,
-      String? parentCommentId}) async {
-    DocumentReference destinationRef = _db.collection('destinations').doc(noteId);
-    DocumentSnapshot userDoc = await _db.collection('users').doc(userId).get();
-    String userName = userDoc.get('name') ?? 'Anonim';
-    String userAvatar = userDoc.get('profile_picture_url') ??
-        'https://via.placeholder.com/150';
-    String userEmail = userDoc.get('email') ?? 'anonim';
-    await destinationRef.collection('comments').add({
-      'text': text,
-      'userId': userId,
-      'userEmail': userEmail,
-      'userName': userName,
-      'userAvatar': userAvatar,
-      'timestamp': FieldValue.serverTimestamp(),
-      'parentCommentId': parentCommentId,
-      'likes': [],
-    });
-    await destinationRef.update({'commentCount': FieldValue.increment(1)});
+  Future<void> addComment({
+    required String noteId,
+    required String text,
+    required String userId,
+    String? parentCommentId,
+  }) async {
+    try {
+      DocumentReference destinationRef = _db.collection('destinations').doc(noteId);
+      DocumentSnapshot userDoc = await _db.collection('users').doc(userId).get();
+
+      String userName = userDoc.get('name') ?? 'Anonim';
+      String userAvatar =
+          userDoc.get('profile_picture_url') ?? 'https://via.placeholder.com/150';
+      String userEmail = userDoc.get('email') ?? 'anonim';
+
+      // Menambahkan dokumen baru ke sub-koleksi 'comments'
+      await destinationRef.collection('comments').add({
+        'text': text,
+        'userId': userId,
+        'userEmail': userEmail,
+        'userName': userName,
+        'userAvatar': userAvatar,
+        'timestamp': FieldValue.serverTimestamp(),
+        'parentCommentId': parentCommentId,
+        'likes': [], // Inisialisasi field 'likes' sebagai array kosong
+      });
+
+      // Menaikkan jumlah komentar di dokumen induk
+      await destinationRef.update({
+        'commentCount': FieldValue.increment(1),
+      });
+
+    } catch (e) {
+      // Menangkap dan mencetak error jika salah satu operasi di atas gagal
+      print("---!!! TERJADI ERROR PADA FUNGSI addComment !!!---");
+      print("ERROR: ${e.toString()}");
+    }
   }
 }
