@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
-import '../theme/colors.dart'; // Import AppColors
-import 'package:jelajahin_apps/widgets/post_card.dart'; // Import PostCard yang baru
-import 'destination_detail_page.dart'; // Tetap import jika ingin bisa klik PostCard ke Detail Page
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:jelajahin_apps/services/firestore_service.dart';
+import 'package:jelajahin_apps/theme/colors.dart';
+import 'package:jelajahin_apps/widgets/post_card.dart';
+import 'package:jelajahin_apps/pages/destination_detail_page.dart';
+import 'package:jelajahin_apps/pages/login.dart'; // Untuk tombol login
+import 'dart:developer' as developer;
 
 class SavedPage extends StatefulWidget {
   const SavedPage({super.key});
@@ -11,167 +15,113 @@ class SavedPage extends StatefulWidget {
 }
 
 class _SavedPageState extends State<SavedPage> {
-  // --- DATA DUMMY UNTUK SAVED PLACES ---
-  // Field 'isFavorite' telah dihapus karena tidak lagi diperlukan
-  List<Map<String, dynamic>> savedPlaces = [
-    {
-      'id': 'saved_1', // Tambahkan ID unik
-      'image': 'https://picsum.photos/seed/shillong1/400/250', // URL gambar yang valid
-      'name': 'City Hut Family Dhaba',
-      'location': 'Shillong, India',
-      'description': 'Restoran keluarga terkenal di Shillong dengan hidangan lokal dan India yang lezat. Suasana nyaman dan pelayanan ramah.',
-      'latitude': -0.30907000,
-      'longitude': 100.37055000,
-      'ownerName': 'Food Explorer', // Dummy owner
-      'ownerAvatar': 'https://picsum.photos/seed/owner1/50/50', // Dummy avatar
-      'reviews': 75, // Dummy likes count
-      'commentsCount': 10, // Dummy comments count
-    },
-    {
-      'id': 'saved_2',
-      'image': 'https://picsum.photos/seed/steakhouse1/400/250', // URL gambar yang valid
-      'name': 'Flame Grilled Steakhouse',
-      'location': 'Shillong, India',
-      'description': 'Tempat terbaik untuk menikmati steak panggang premium di Shillong. Pilihan daging yang berkualitas dan dimasak sempurna.',
-      'latitude': -7.2458,
-      'longitude': 112.7379,
-      'ownerName': 'Grill Master',
-      'ownerAvatar': 'https://picsum.photos/seed/owner2/50/50',
-      'reviews': 120,
-      'commentsCount': 25,
-    },
-    {
-      'id': 'saved_3',
-      'image': 'https://picsum.photos/seed/pariscafe/400/250', // URL gambar yang valid
-      'name': 'Cafe de Paris',
-      'location': 'Paris, France',
-      'description': 'Kafe klasik di jantung kota Paris yang menyajikan kopi Prancis otentik dan pastry lezat.',
-      'latitude': 48.8566,
-      'longitude': 2.3522,
-      'ownerName': 'Bonjour Traveler',
-      'ownerAvatar': 'https://picsum.photos/seed/owner3/50/50',
-      'reviews': 300,
-      'commentsCount': 80,
-    },
-  ];
-  // --- AKHIR DATA DUMMY ---
-
-  late ScrollController _scrollController;
-  bool _isScrolled = false;
-  
-  get postData => null;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-    _scrollController.addListener(() {
-      setState(() {
-        _isScrolled = _scrollController.offset > 0;
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  // Fungsi untuk menghapus postingan dari daftar savedPlaces (unsave)
-  void _handleUnsavePost(Map<String, dynamic> postToUnsave) {
-    setState(() {
-      // Hapus berdasarkan ID untuk memastikan unik
-      savedPlaces.removeWhere((post) => post['id'] == postToUnsave['id']);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Postingan "${postToUnsave['name']}" dihapus dari daftar tersimpan.')),
-      );
-    });
-    // --- INTEGRASI DATABASE (contoh untuk unsave) ---
-    /*
-    // Di sini Anda akan memperbarui Firestore untuk menandai postingan ini tidak lagi disimpan oleh pengguna
-    // Misalnya, menghapus ID postingan dari array 'savedPosts' di dokumen user
-    if (FirebaseAuth.instance.currentUser != null && postToUnsave.containsKey('id')) {
-      final userId = FirebaseAuth.instance.currentUser!.uid;
-      final postId = postToUnsave['id'];
-      FirebaseFirestore.instance.collection('users').doc(userId).update({
-        'savedPosts': FieldValue.arrayRemove([postId]),
-      }).then((_) {
-        // developer.log('Post $postId unsaved in Firestore for user $userId'); // Uncomment if developer.log is available
-      }).catchError((error) {
-        // developer.log('Failed to unsave post $postId in Firestore: $error'); // Uncomment if developer.log is available
-        // Optional: If DB update fails, you might want to re-add it to local list
-      });
-    }
-    */
-    // --- AKHIR INTEGRASI DATABASE ---
-  }
-
+  final FirestoreService _firestoreService = FirestoreService();
+  final User? _currentUser = FirebaseAuth.instance.currentUser;
 
   @override
   Widget build(BuildContext context) {
-    // Langsung gunakan savedPlaces karena tidak perlu lagi filter 'isFavorite'
-    final List<Map<String, dynamic>> placesToShow = savedPlaces;
-
     return Scaffold(
-      backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: _isScrolled ? AppColors.darkTeal : AppColors.white,
-        elevation: 0,
-        // leading: BackButton(color: _isScrolled ? AppColors.white : AppColors.primaryDark),
-        title: Text(
-          'Saved',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: _isScrolled ? Colors.white : AppColors.primaryDark,
-              ),
+        title: const Text(
+          'Postingan Tersimpan',
+          style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold),
         ),
+        backgroundColor: AppColors.white,
+        elevation: 0,
         centerTitle: true,
       ),
-      body: placesToShow.isEmpty
-          ? Center(
-              child: Text(
-                "No saved trips yet.",
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
+      backgroundColor: AppColors.white,
+      body: _currentUser == null
+          ? _buildLoginPrompt(context)
+          : _buildSavedPostsList(),
+    );
+  }
+
+  // Widget yang ditampilkan jika user belum login
+  Widget _buildLoginPrompt(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.bookmark_border, size: 80, color: Colors.grey),
+            const SizedBox(height: 20),
+            const Text(
+              'Simpan Destinasi Favoritmu',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Login untuk melihat postingan yang telah Anda simpan.',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               ),
-            )
-          : ListView.builder(
-              controller: _scrollController,
-              itemCount: placesToShow.length,
-              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-              itemBuilder: (context, index) {
-                final placeData = placesToShow[index];
-                return GestureDetector( // Wrapper untuk navigasi ke detail page
-                  onTap: () {
-                    // Navigasi ke DestinationDetailPage
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DestinationDetailPage(destination: placeData),
-                      ),
-                    );
-                  },
-                  child: PostCard(
-                    postData: placeData,
-                    ownerName: placeData['ownerName'] ?? 'Unknown User',
-                    ownerAvatar: placeData['ownerAvatar'] ?? 'https://via.placeholder.com/50',
-                    initialIsSaved: true, // Karena di SavedPage, semua post diasumsikan sudah tersimpan
-                    onDelete: _handleUnsavePost, // Teruskan fungsi unsave sebagai callback delete
-                    onTap: () { // <-- Tambahkan onTap untuk navigasi
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DestinationDetailPage(destination: postData),
-                        ),
-                      );
-                    },
+              child: const Text('Login', style: TextStyle(fontSize: 16)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget untuk menampilkan daftar postingan yang disimpan
+  Widget _buildSavedPostsList() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _firestoreService.getSavedDestinationsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          developer.log("SavedPage: Error loading posts: ${snapshot.error}");
+          return Center(child: Text('Gagal memuat postingan: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(
+            child: Text(
+              'Anda belum menyimpan postingan apapun.',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          );
+        }
+
+        final List<Map<String, dynamic>> posts = snapshot.data!;
+        return ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final postData = posts[index];
+            return PostCard(
+              postData: postData,
+              ownerName: postData['ownerName'] ?? 'Anonim',
+              ownerAvatar: postData['ownerAvatar'] ?? 'https://via.placeholder.com/50',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DestinationDetailPage(destination: postData),
                   ),
                 );
               },
-            ),
+            );
+          },
+        );
+      },
     );
   }
 }

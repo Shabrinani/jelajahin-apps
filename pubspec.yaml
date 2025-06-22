@@ -1,35 +1,40 @@
 name: jelajahin_apps
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.1.0
+version: 1.0.0+1
 
 environment:
-  sdk: ^3.7.2
+  sdk: '>=3.4.3 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  google_fonts: ^6.1.0
+  
+  # Firebase
   firebase_core: ^2.32.0
   firebase_auth: ^4.20.0
-  cloud_firestore: ^4.17.3
+  cloud_firestore: ^4.17.5
   firebase_storage: ^11.7.7
-  intl: ^0.18.1
-  image_picker: ^1.1.1
-  uuid: ^4.3.3
-  flutter_map: ^6.1.0
-  latlong2: ^0.9.0
-  http: ^1.4.0
-  flutter_map_cancellable_tile_provider: ^2.0.0
-  shared_preferences: ^2.2.2
-  flutter_rating_bar: ^4.0.1
-  cached_network_image: ^3.3.1
-  dotted_border: ^2.1.0
 
+  # UI & Utilities
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.2.1
+  image_picker: ^1.1.2
+  dotted_border: ^2.1.0
+  cached_network_image: ^3.3.1 # Untuk cache gambar
+  timeago: ^3.6.1              # Untuk format waktu (misal: 5 menit yang lalu)
+
+  # Maps
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.1
+  http: ^1.2.1
+  uuid: ^4.4.0
+  shared_preferences: ^2.5.3
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true

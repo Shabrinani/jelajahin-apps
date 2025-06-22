@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// Import theme/colors.dart directly for AppColors
+import 'package:jelajahin_apps/services/firestore_service.dart'; // Import service baru
 import 'package:jelajahin_apps/theme/colors.dart';
-import 'package:jelajahin_apps/pages/login.dart'; // Import login page
+import 'package:jelajahin_apps/pages/login.dart';
 
 class RegisterPage extends StatefulWidget {
   final Function(String, String) onRegister;
@@ -15,22 +14,23 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  // --- STATE & CONTROLLERS ---
+  final FirestoreService _firestoreService = FirestoreService(); // Instance service
   final TextEditingController nameController = TextEditingController();
-  final TextEditingController usernameController = TextEditingController(); // This will be used as email for Firebase
+  final TextEditingController usernameController = TextEditingController(); // This will be used as email
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController retypePasswordController = TextEditingController();
 
   bool showPassword = false;
   bool showRetypePassword = false;
   bool acceptTerms = false;
-  bool _isLoading = false; // State for loading indicator
+  bool _isLoading = false;
 
-  // Default profile picture URL (replace with your actual default image URL)
-  // You might want to upload a default image to Firebase Storage and get its download URL.
-  // For now, I'll use a placeholder.
+  // --- CONSTANTS ---
   static const String _defaultProfilePictureUrl =
-      'https://firebasestorage.googleapis.com/v0/b/jelajahin-apps.appspot.com/o/default_profile_picture.png?alt=media&token=YOUR_GENERATED_TOKEN'; // <--- PERHATIAN: Ganti dengan URL gambar default Anda
+      'https://firebasestorage.googleapis.com/v0/b/jelajahin-apps.appspot.com/o/default_profile_picture.png?alt=media&token=e9308c02-6132-4e50-9289-9a2c27b9e6f2';
 
+  // --- METHODS ---
   void showCustomDialog(String title, String message, {VoidCallback? onConfirm}) {
     showDialog(
       context: context,
@@ -39,16 +39,16 @@ class _RegisterPageState extends State<RegisterPage> {
         title: Text(
           title,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primaryDark,
-          ),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryDark,
+              ),
         ),
         content: Text(
           message,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppColors.black,
-          ),
+                color: AppColors.black,
+              ),
         ),
         actions: [
           TextButton(
@@ -70,11 +70,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
   void register() async {
     final name = nameController.text.trim();
-    final username = usernameController.text.trim(); // This is the email for Firebase
+    final email = usernameController.text.trim(); // Changed variable name for clarity
     final password = passwordController.text;
     final retypePassword = retypePasswordController.text;
 
-    if (name.isEmpty || username.isEmpty || password.isEmpty || retypePassword.isEmpty) {
+    if (name.isEmpty || email.isEmpty || password.isEmpty || retypePassword.isEmpty) {
       showCustomDialog("Gagal", "Semua kolom harus diisi.");
       return;
     }
@@ -90,43 +90,36 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     setState(() {
-      _isLoading = true; // Show loading indicator
+      _isLoading = true;
     });
 
     try {
       // 1. Register user with Firebase Authentication
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: username, // 'username' is used as 'email' for Firebase
+        email: email,
         password: password,
       );
 
-      // 2. Get the newly created user's UID
       String? userId = userCredential.user?.uid;
 
       if (userId != null) {
-        // 3. Save additional user data to Cloud Firestore
-        // We'll create a document in a 'users' collection with the user's UID as the document ID.
-        await FirebaseFirestore.instance.collection('users').doc(userId).set({
-          'uid': userId, // Menambahkan UID di dalam dokumen juga untuk kemudahan query (sesuai DB schema)
-          'name': name,
-          'email': username, // Menyimpan email juga untuk referensi (sesuai DB schema)
-          'profile_picture_url': _defaultProfilePictureUrl, // Menggunakan URL default yang telah ditentukan
-          'joined_at': FieldValue.serverTimestamp(), // Timestamp kapan user dibuat (sesuai DB schema)
-          'saved_posts_ids': [], // Array kosong untuk postingan yang disimpan (sesuai DB schema)
-        });
+        // 2. Save additional user data to Cloud Firestore using FirestoreService
+        await _firestoreService.createUser(
+          uid: userId,
+          name: name,
+          email: email,
+          profilePictureUrl: _defaultProfilePictureUrl,
+        );
 
-        // Inform the parent widget about successful registration (if needed for specific flow)
-        widget.onRegister(username, password);
+        widget.onRegister(email, password);
 
         showCustomDialog("Berhasil", "Registrasi berhasil!", onConfirm: () {
-          // Navigate to the login page after successful registration and data saving
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const LoginPage()),
           );
         });
       } else {
-        // This case should ideally not happen if createUserWithEmailAndPassword succeeds
         showCustomDialog("Gagal", "Terjadi kesalahan: UID pengguna tidak ditemukan.");
       }
     } on FirebaseAuthException catch (e) {
@@ -142,12 +135,15 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       showCustomDialog("Gagal", "Terjadi kesalahan saat registrasi: ${e.toString()}");
     } finally {
-      setState(() {
-        _isLoading = false; // Hide loading indicator regardless of success or failure
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
+  // --- BUILD METHOD ---
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
@@ -177,7 +173,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 child: Center(
                   child: Image.asset(
-                    'images/logo_jelajahin.png', // Ensure this path is correct
+                    'images/logo_jelajahin.png',
                     width: 70,
                     height: 70,
                   ),
@@ -233,7 +229,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 20),
 
-              // Input Username (Used as Email for Firebase)
+              // Input Email
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -371,7 +367,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : register, // Disable button when loading
+                  onPressed: _isLoading ? null : register,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryDark,
                     foregroundColor: AppColors.white,
@@ -381,7 +377,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     elevation: 0,
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: AppColors.white) // Show loading indicator
+                      ? const CircularProgressIndicator(color: AppColors.white)
                       : Text(
                           "Sign Up",
                           style: textTheme.labelLarge?.copyWith(
