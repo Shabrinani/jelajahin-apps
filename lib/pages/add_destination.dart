@@ -29,11 +29,11 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
   final MapController _mapController = MapController();
   double _overallRating = 3.0;
   XFile? _pickedImage;
-  Uint8List? _webImageBytes; // Ubah nama variabel untuk lebih jelas
+  Uint8List? _webImageBytes;
   LatLng _selectedLatLng = const LatLng(-6.200000, 106.816666);
   bool _isUploading = false;
   bool _isLoadingLocation = false;
-  // static const String _imgbbApiKey = '4000d7846dcaf738642127c07ddcfbed'; // Dihapus karena tidak dipakai lagi
+  // static const String _imgbbApiKey = '4000d7846dcaf738642127c07ddcfbed';
   String? _selectedCategory;
   final List<String> _categories = [
     'Restaurant', 'History', 'Nature', 'Museum', 'Beach',
@@ -61,16 +61,14 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     super.dispose();
   }
 
-  // Hapus fungsi _uploadImageToImgbb sepenuhnya karena tidak lagi digunakan
-  // Future<String> _uploadImageToImgbb(XFile imageFile) async { ... }
-
+  /// Fungsi untuk mengunggah destinasi baru
   Future<void> _uploadDestination() async {
     if (!_formKey.currentState!.validate() || _pickedImage == null || _selectedCategory == null) {
       _showSnackBar('Mohon lengkapi semua data termasuk gambar dan kategori.');
       return;
     }
 
-    // Pastikan _webImageBytes sudah terisi untuk web atau _pickedImage untuk mobile
+    // Pastikan _webImageBytes sudah terisi
     if (kIsWeb && _webImageBytes == null) {
       _showSnackBar('Mohon pilih gambar terlebih dahulu (Web).');
       return;
@@ -101,14 +99,13 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
       }
 
       // Pastikan ukuran gambar tidak terlalu besar (kurang dari 1MB)
-      // Ini adalah batasan Firestore, bukan solusi jangka panjang
-      if (imageDataBytes.lengthInBytes > 1 * 1024 * 1024) { // 1MB
+      if (imageDataBytes.lengthInBytes > 1 * 1024 * 1024) {
         _showSnackBar('Ukuran gambar terlalu besar (maks 1MB). Mohon pilih gambar yang lebih kecil.', isError: true);
         setState(() => _isUploading = false);
         return;
       }
 
-      _showSnackBar('Mengunggah data destinasi...', isError: false); // Feedback untuk pengguna
+      _showSnackBar('Mengunggah data destinasi...', isError: false);
 
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
       final ownerName = userDoc.data()?['name'] ?? 'Anonim';
@@ -121,7 +118,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         'title': _nameController.text.trim(),
         'location': _locationController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'imageData': imageDataBytes.toList(), // Menyimpan Uint8List sebagai List<int>
+        'imageData': imageDataBytes.toList(),
         'latitude': _selectedLatLng.latitude,
         'longitude': _selectedLatLng.longitude,
         'rating': _overallRating,
@@ -226,7 +223,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         final bytes = await picked.readAsBytes();
         setState(() {
           _pickedImage = picked;
-          _webImageBytes = bytes; // Simpan ke _webImageBytes
+          _webImageBytes = bytes;
         });
       } else {
         setState(() => _pickedImage = picked);
@@ -239,17 +236,16 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        // AppBar disesuaikan sesuai permintaan Anda
         appBar: AppBar(
           title: const Text(
             'Tambah Destinasi Baru',
             style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 20),
           ),
           centerTitle: true,
-          backgroundColor: AppColors.white, // Latar belakang putih
-          foregroundColor: AppColors.primaryDark, // Warna ikon dan teks
-          elevation: 1.0, // Sedikit bayangan
-          leading: IconButton( // Tombol kembali yang konsisten
+          backgroundColor: AppColors.white,
+          foregroundColor: AppColors.primaryDark,
+          elevation: 1.0,
+          leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryDark),
             onPressed: () => Navigator.pop(context),
           ),
@@ -264,7 +260,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionHeader('Foto Destinasi'),
-                    _buildImagePicker(), // Tetap menggunakan widget image picker lama
+                    _buildImagePicker(),
                     const SizedBox(height: 24),
                     _buildSectionHeader('Informasi Dasar'),
                     _buildInfoCard(),
@@ -307,7 +303,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(13.0),
                     child: kIsWeb
-                        ? Image.memory(_webImageBytes!, fit: BoxFit.cover) // Menggunakan _webImageBytes
+                        ? Image.memory(_webImageBytes!, fit: BoxFit.cover)
                         : Image.file(File(_pickedImage!.path), fit: BoxFit.cover),
                   )
                 : const Center(

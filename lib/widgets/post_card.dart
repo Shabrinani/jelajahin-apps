@@ -3,24 +3,21 @@ import 'dart:math' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // Tetap diperlukan untuk ownerAvatar
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:jelajahin_apps/services/firestore_service.dart';
 import 'package:jelajahin_apps/theme/colors.dart';
-import 'dart:typed_data'; // Import untuk Uint8List
+import 'dart:typed_data';
 
-// Helper untuk format waktu, pastikan sudah ditambahkan di pubspec.yaml
 import 'package:timeago/timeago.dart' as timeago;
 
 class PostCard extends StatelessWidget {
-  // Menerima map data lengkap untuk data real-time
   final Map<String, dynamic> postData;
 
-  // Menerima parameter individual untuk kompatibilitas
   final String ownerName;
   final String ownerAvatar;
   final VoidCallback onTap;
-  final VoidCallback? onDelete; // Ini nullable
-  final VoidCallback? onEdit; // Ini nullable
+  final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   const PostCard({
     super.key,
@@ -28,8 +25,8 @@ class PostCard extends StatelessWidget {
     required this.onTap,
     required this.ownerName,
     required this.ownerAvatar,
-    this.onDelete, // Tidak wajib diisi
-    this.onEdit, // Tidak wajib diisi
+    this.onDelete,
+    this.onEdit,
   });
 
   @override
@@ -37,38 +34,30 @@ class PostCard extends StatelessWidget {
     final TextTheme textTheme = Theme.of(context).textTheme;
     final currentUser = FirebaseAuth.instance.currentUser;
 
-    // --- Mengambil data dari `postData` untuk pembaruan real-time ---
     final List likes = postData['likes'] ?? [];
     final int commentCount = postData['commentCount'] ?? 0;
     final String destinationId = postData['id'] ?? '';
     final String ownerId = postData['ownerId'] ?? '';
     final bool isLiked = likes.contains(currentUser?.uid);
-    // isOwner akan true jika user yang sedang login adalah pemilik postingan
     final bool isOwner = currentUser?.uid == ownerId;
 
-    // --- Mengambil data lain dari `postData` untuk tampilan ---
     final String title = postData['title'] ?? 'Tanpa Judul';
     final String location = postData['location'] ?? 'Tanpa Lokasi';
-    // final String imageUrl = postData['imageUrl'] ?? 'https://placehold.co/600x400?text=No+Image'; // Hapus ini
 
-    // Ambil imageData sebagai List<dynamic> dari Firestore
     final List<dynamic>? imageDataList = postData['imageData'] as List<dynamic>?;
     Uint8List? imageDataBytes;
     if (imageDataList != null && imageDataList.isNotEmpty) {
       try {
         imageDataBytes = Uint8List.fromList(imageDataList.cast<int>());
       } catch (e) {
-        // Handle error jika casting gagal (misal data bukan list of int)
         developer.log('Error casting imageData to Uint8List: $e' as num);
-        imageDataBytes = null; // Set null agar placeholder tampil
+        imageDataBytes = null;
       }
     }
 
-    // --- Penanganan Timestamp yang Aman ---
     final dynamic createdAtData = postData['createdAt'];
     String timeAgo = 'Baru saja';
     if (createdAtData is Timestamp) {
-      // Mengatur lokal 'timeago' ke Bahasa Indonesia
       timeago.setLocaleMessages('id', timeago.IdMessages());
       timeAgo = timeago.format(createdAtData.toDate(), locale: 'id');
     }
@@ -85,14 +74,12 @@ class PostCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Header dengan Nama, Avatar, dan Waktu Post ---
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    // Menggunakan CachedNetworkImageProvider untuk ownerAvatar
                     backgroundImage: ownerAvatar.isNotEmpty ? CachedNetworkImageProvider(ownerAvatar) : null,
                     backgroundColor: Colors.grey.shade200,
                     child: ownerAvatar.isEmpty ? const Icon(Icons.person, size: 24, color: Colors.grey) : null,
@@ -139,13 +126,13 @@ class PostCard extends StatelessWidget {
               ),
             ),
 
-            // --- Gambar Post (menggunakan Image.memory) ---
-            Hero( // Tetap gunakan Hero
-              tag: 'post_image_$destinationId', // Pastikan tag hero unik
+            // --- Gambar Post ---
+            Hero(
+              tag: 'post_image_$destinationId',
               child: Container(
                 width: double.infinity,
                 height: 250,
-                color: Colors.grey.shade200, // Background placeholder
+                color: Colors.grey.shade200,
                 child: imageDataBytes != null && imageDataBytes.isNotEmpty
                     ? Image.memory(
                         imageDataBytes,
@@ -155,7 +142,7 @@ class PostCard extends StatelessWidget {
                         },
                       )
                     : const Center(
-                        child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey), // Ikon jika tidak ada gambar
+                        child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
                       ),
               ),
             ),
@@ -200,7 +187,6 @@ class PostCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Kumpulan Statistik di Kanan
                   Row(
                     children: [
                       _buildStatIcon(Icons.favorite_rounded, likes.length.toString()),

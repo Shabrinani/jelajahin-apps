@@ -1,5 +1,5 @@
 import 'dart:math' as developer;
-import 'dart:typed_data'; // Import for Uint8List
+import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,7 +7,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:jelajahin_apps/services/firestore_service.dart';
 import 'package:jelajahin_apps/theme/colors.dart';
 import 'package:jelajahin_apps/widgets/comment_section.dart';
-// import 'package:cached_network_image/cached_network_image.dart'; // Hapus atau jadikan komentar
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -77,7 +76,6 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
 
           final destinationData = snapshot.data!.data() as Map<String, dynamic>;
 
-          // Ambil imageData sebagai List<dynamic> (karena Firestore menyimpan List<int>)
           final List<dynamic>? imageDataList = destinationData['imageData'] as List<dynamic>?;
           Uint8List? imageDataBytes;
           if (imageDataList != null) {
@@ -88,7 +86,7 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
           final String location = destinationData['location'] ?? 'Lokasi Tidak Tersedia';
           final String description = destinationData['description'] ?? 'Deskripsi tidak tersedia.';
           final String ownerName = destinationData['ownerName'] ?? 'Anonim';
-          final String ownerAvatar = destinationData['ownerAvatar'] ?? 'https://via.placeholder.com/150'; // Avatar tetap URL
+          final String ownerAvatar = destinationData['ownerAvatar'] ?? 'https://via.placeholder.com/150';
           final double rating = (destinationData['rating'] as num?)?.toDouble() ?? 0.0;
           final double latitude = (destinationData['latitude'] as num?)?.toDouble() ?? -6.200000;
           final double longitude = (destinationData['longitude'] as num?)?.toDouble() ?? 106.816666;
@@ -135,7 +133,6 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
     );
   }
 
-  // Ubah signature agar menerima Uint8List? imageBytes
   SliverAppBar _buildEnhancedSliverAppBar(BuildContext context, String title, String location, Uint8List? imageBytes, String destinationId, bool isLiked, int likeCount) {
     return SliverAppBar(
       expandedHeight: 300.0,
@@ -216,8 +213,7 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
           children: [
             Positioned.fill(
               child: Hero(
-                tag: 'post_image_$destinationId', // Tag hero harus unik dan konsisten
-                // Menggunakan Image.memory untuk menampilkan byte gambar
+                tag: 'post_image_$destinationId',
                 child: imageBytes != null && imageBytes.isNotEmpty
                     ? Image.memory(
                         imageBytes,
@@ -230,7 +226,7 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                           );
                         },
                       )
-                    : Container( // Placeholder jika imageBytes kosong
+                    : Container(
                         color: Colors.grey.shade300,
                         child: const Icon(Icons.broken_image_outlined, color: Colors.grey, size: 50),
                       ),

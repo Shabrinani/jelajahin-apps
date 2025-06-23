@@ -21,7 +21,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController _dobController = TextEditingController();
 
   User? _currentUser;
-  bool _isLoading = true; // Start with loading true
+  bool _isLoading = true;
 
   String? _selectedAvatarUrl;
   DateTime? _selectedDate;
@@ -119,7 +119,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  // --- UI Methods (DatePicker, AvatarPicker, etc.) ---
+  // --- UI Methods ---
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(

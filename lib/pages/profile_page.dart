@@ -1,19 +1,15 @@
-// Jelajahin_apps/pages/profile_page.dart
-// ignore_for_file: prefer_const_constructors, deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jelajahin_apps/pages/destination_detail_page.dart';
-import 'package:jelajahin_apps/pages/edit_destination_page.dart'; // Pastikan ini diimpor
+import 'package:jelajahin_apps/pages/edit_destination_page.dart';
 import 'package:jelajahin_apps/theme/colors.dart';
 import 'package:jelajahin_apps/pages/login.dart';
 import 'package:jelajahin_apps/pages/edit_profile.dart';
 import 'package:jelajahin_apps/pages/settings.dart';
 import 'package:jelajahin_apps/widgets/post_card.dart';
 import 'package:jelajahin_apps/services/firestore_service.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // Import for CachedNetworkImage
-// import 'package:jelajahin_apps/pages/add_destination_screen.dart'; // Pastikan ini diimpor jika menggunakan rute langsung
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -26,7 +22,6 @@ class _ProfilePageState extends State<ProfilePage> {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Fungsi untuk menghapus postingan
   Future<void> _deletePost(Map<String, dynamic> postToDelete) async {
     final String postId = postToDelete['id'] ?? '';
     final String postName = postToDelete['title'] ?? 'postingan ini';
@@ -35,8 +30,8 @@ class _ProfilePageState extends State<ProfilePage> {
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Postingan?'), // Lebih user-friendly
-        content: Text('Apakah Anda yakin ingin menghapus "$postName"?'), // Lebih user-friendly
+        title: const Text('Hapus Postingan?'),
+        content: Text('Apakah Anda yakin ingin menghapus "$postName"?'),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal')),
           TextButton(
@@ -52,13 +47,13 @@ class _ProfilePageState extends State<ProfilePage> {
         await _firestoreService.deleteDestination(postId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Postingan "$postName" berhasil dihapus.')), // Pesan lebih jelas
+            SnackBar(content: Text('Postingan "$postName" berhasil dihapus.')),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal menghapus postingan: $e')), // Pesan lebih jelas
+            SnackBar(content: Text('Gagal menghapus postingan: $e')),
           );
         }
       }
@@ -70,7 +65,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
-        title: const Text('Profil', style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold)), // Judul lebih user-friendly
+        title: const Text('Profil', style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.white,
         elevation: 0,
         centerTitle: true,
@@ -87,12 +82,11 @@ class _ProfilePageState extends State<ProfilePage> {
         stream: _auth.authStateChanges(),
         builder: (context, authSnapshot) {
           if (authSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary)); // Warna loading
+            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
           }
           if (!authSnapshot.hasData || authSnapshot.data == null) {
             return _buildLoginPrompt(context);
           }
-          // Jika user sudah login, bangun UI profil
           return _buildProfileView();
         },
       ),
@@ -114,10 +108,9 @@ class _ProfilePageState extends State<ProfilePage> {
         }
 
         final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-        final String userName = userData['name'] ?? 'Jelajahin Pengguna'; // Default lebih user-friendly
+        final String userName = userData['name'] ?? 'Jelajahin Pengguna';
         final String profilePictureUrl = userData['profile_picture_url'] ?? '';
 
-        // Gunakan StreamBuilder lagi untuk mendapatkan postingan di sini
         return StreamBuilder<List<Map<String, dynamic>>>(
           stream: _firestoreService.getUserPostsStream(),
           builder: (context, postsSnapshot) {
@@ -128,7 +121,7 @@ class _ProfilePageState extends State<ProfilePage> {
               return Center(child: Text("Gagal memuat postingan: ${postsSnapshot.error}", style: TextStyle(color: Colors.red)));
             }
 
-            final posts = postsSnapshot.data ?? []; // Dapatkan daftar postingan
+            final posts = postsSnapshot.data ?? [];
 
             return NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -138,15 +131,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ];
 
-                // Hanya tambahkan judul "Postingan Anda" jika ada postingan
-                // Ubah dari SliverAppBar menjadi SliverToBoxAdapter
                 if (posts.isNotEmpty) {
                   slivers.add(
-                    SliverToBoxAdapter( // Mengganti SliverAppBar menjadi SliverToBoxAdapter
+                    const SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(24.0, 20.0, 16.0, 10.0), // Padding disesuaikan
+                        padding: EdgeInsets.fromLTRB(24.0, 20.0, 16.0, 10.0),
                         child: Text(
-                          'Postingan Anda', // Judul untuk daftar postingan
+                          'Postingan Anda',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -159,8 +150,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 }
                 return slivers;
               },
-              body: posts.isEmpty // Tampilkan pesan jika tidak ada postingan
-                  ? _buildNoPostsYet(context) // Widget baru untuk pesan ini
+              body: posts.isEmpty
+                  ? _buildNoPostsYet(context)
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       itemCount: posts.length,
@@ -262,8 +253,6 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // const Icon(Icons.travel_explore_outlined, size: 80, color: AppColors.primary),
-            // const SizedBox(height: 20),
             const Text(
               'Yuk, Bagikan Destinasimu!',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
@@ -275,21 +264,6 @@ class _ProfilePageState extends State<ProfilePage> {
               style: TextStyle(fontSize: 16, color: Colors.grey[700]),
               textAlign: TextAlign.center,
             ),
-            // const SizedBox(height: 24),
-            // ElevatedButton.icon(
-            //   onPressed: () {
-            //     Navigator.push(context, MaterialPageRoute(builder: (context) => const AddDestinationScreen()));
-            //   },
-            //   icon: const Icon(Icons.add_location_alt_outlined, color: AppColors.white),
-            //   label: const Text('Tambah Destinasi Baru', style: TextStyle(fontSize: 16, color: AppColors.white)),
-            //   style: ElevatedButton.styleFrom(
-            //     backgroundColor: AppColors.primary,
-            //     padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-            //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-            //     elevation: 5,
-            //     textStyle: const TextStyle(fontWeight: FontWeight.bold),
-            //   ),
-            // ),
           ],
         ),
       ),

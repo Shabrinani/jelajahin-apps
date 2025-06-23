@@ -1,4 +1,3 @@
-// jelajahin_apps/pages/edit_destination_page.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -6,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_map/flutter_map.dart'; // Make sure this is imported
-import 'package:latlong2/latlong.dart'; // Make sure this is imported
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'dart:developer' as developer;
 import 'package:dotted_border/dotted_border.dart';
 import 'package:jelajahin_apps/services/firestore_service.dart';
-import '../theme/colors.dart'; // Adjust path if different
+import '../theme/colors.dart';
 
 class EditDestinationPage extends StatefulWidget {
   final String destinationId;
@@ -34,17 +33,17 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
   final MapController _mapController = MapController();
 
   String? _selectedCategory;
-  double _overallRating = 3.0; // Default rating
-  XFile? _pickedImage; // Gambar baru yang dipilih dari galeri
-  Uint8List? _webImageBytes; // Byte gambar baru untuk web
-  Uint8List? _currentImageDataBytes; // Byte gambar yang sudah ada dari Firestore
+  double _overallRating = 3.0;
+  XFile? _pickedImage;
+  Uint8List? _webImageBytes;
+  Uint8List? _currentImageDataBytes;
 
-  LatLng _selectedLatLng = const LatLng(-6.200000, 106.816666); // Default Jakarta
+  LatLng _selectedLatLng = const LatLng(-6.200000, 106.816666);
   bool _isSaving = false;
   bool _isFetchingData = true;
   bool _isLoadingLocation = false;
 
-  // static const String _imgbbApiKey = '4000d7846dcaf738642127c07ddcfbed'; // Tidak lagi digunakan
+  // static const String _imgbbApiKey = '4000d7846dcaf738642127c07ddcfbed';
 
   final List<String> _categories = [
     'Restaurant', 'History', 'Nature', 'Museum', 'Beach',
@@ -89,7 +88,6 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
         _locationController.text = data['location'] ?? '';
         _descriptionController.text = data['description'] ?? '';
 
-        // Ambil imageData sebagai List<dynamic> dari Firestore
         final List<dynamic>? imageDataList = data['imageData'] as List<dynamic>?;
         if (imageDataList != null && imageDataList.isNotEmpty) {
           try {
@@ -121,46 +119,38 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
     } catch (e) {
       developer.log('Error fetching destination data: $e');
       if (mounted) {
-        _showSnackBar('Gagal memuat data destinasi: $e', isError: true); // Pesan BH
+        _showSnackBar('Gagal memuat data destinasi: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _isFetchingData = false);
     }
   }
 
-  // Fungsi upload gambar ImgBB dihapus atau dikomentari
-  // Future<String> _uploadImageToImgbb(XFile imageFile) async { ... }
-
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) {
-      _showSnackBar('Mohon lengkapi semua kolom yang wajib diisi.'); // Pesan BH
+      _showSnackBar('Mohon lengkapi semua kolom yang wajib diisi.');
       return;
     }
 
-    // Tentukan byte gambar yang akan disimpan
     Uint8List? imageDataToSave;
     if (_pickedImage != null) {
-      // Jika gambar baru dipilih
       if (kIsWeb) {
         imageDataToSave = _webImageBytes;
       } else {
         imageDataToSave = await _pickedImage!.readAsBytes();
       }
 
-      // Validasi ukuran gambar jika ada gambar baru
       if (imageDataToSave != null && imageDataToSave.lengthInBytes > 1 * 1024 * 1024) {
         _showSnackBar('Ukuran gambar terlalu besar (maks 1MB). Mohon pilih gambar yang lebih kecil.', isError: true);
         setState(() => _isSaving = false);
         return;
       }
     } else {
-      // Jika tidak ada gambar baru dipilih, gunakan gambar yang sudah ada (jika ada)
       imageDataToSave = _currentImageDataBytes;
     }
 
-    // Jika tidak ada gambar sama sekali
     if (imageDataToSave == null || imageDataToSave.isEmpty) {
-      _showSnackBar('Mohon pilih gambar untuk destinasi ini.'); // Pesan BH
+      _showSnackBar('Mohon pilih gambar untuk destinasi ini.');
       return;
     }
 
@@ -171,7 +161,7 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
         'title': _titleController.text.trim(),
         'location': _locationController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'imageData': imageDataToSave.toList(), // Simpan byte gambar
+        'imageData': imageDataToSave.toList(),
         'latitude': _selectedLatLng.latitude,
         'longitude': _selectedLatLng.longitude,
         'rating': _overallRating,
@@ -182,12 +172,12 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
       await _firestoreService.updateDestination(widget.destinationId, dataToUpdate);
 
       if (!mounted) return;
-      _showSnackBar('Postingan berhasil diperbarui!'); // Pesan BH
+      _showSnackBar('Postingan berhasil diperbarui!');
       Navigator.pop(context);
     } catch (e) {
       developer.log('Error updating destination: $e');
       if (mounted) {
-        _showSnackBar('Gagal memperbarui destinasi: ${e.toString()}', isError: true); // Pesan BH
+        _showSnackBar('Gagal memperbarui destinasi: ${e.toString()}', isError: true);
       }
     } finally {
       if (mounted) {
@@ -218,12 +208,12 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
       if (mounted && response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
-          _locationController.text = data['display_name'] ?? 'Alamat tidak ditemukan'; // Pesan BH
+          _locationController.text = data['display_name'] ?? 'Alamat tidak ditemukan';
           _selectedLatLng = latLng;
         });
       }
     } catch (e) {
-      _showSnackBar('Gagal mendapatkan alamat.', isError: true); // Pesan BH
+      _showSnackBar('Gagal mendapatkan alamat.', isError: true);
     } finally {
       if (mounted) setState(() => _isLoadingLocation = false);
     }
@@ -251,11 +241,11 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
           });
           _mapController.move(_selectedLatLng, 13.0);
         } else {
-          _showSnackBar('Alamat tidak ditemukan.'); // Pesan BH
+          _showSnackBar('Alamat tidak ditemukan.');
         }
       }
     } catch (e) {
-      _showSnackBar('Error mencari alamat: $e', isError: true); // Pesan BH
+      _showSnackBar('Error mencari alamat: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isLoadingLocation = false);
     }
@@ -263,7 +253,7 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
 
   Future<bool> _onWillPop() async {
     if (_isSaving) {
-      _showSnackBar('Mohon tunggu proses penyimpanan selesai.'); // Pesan BH
+      _showSnackBar('Mohon tunggu proses penyimpanan selesai.');
       return false;
     }
     return true;
@@ -277,13 +267,13 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
         final bytes = await picked.readAsBytes();
         setState(() {
           _pickedImage = picked;
-          _webImageBytes = bytes; // Ini akan digunakan jika dipilih gambar baru di web
-          _currentImageDataBytes = null; // Hapus gambar lama jika ada gambar baru dipilih
+          _webImageBytes = bytes;
+          _currentImageDataBytes = null;
         });
       } else {
         setState(() {
           _pickedImage = picked;
-          _currentImageDataBytes = null; // Hapus gambar lama jika ada gambar baru dipilih
+          _currentImageDataBytes = null;
         });
       }
     }
@@ -297,18 +287,18 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
         appBar: AppBar(
           title: const Text('Edit Destinasi',
               style: TextStyle(
-                  color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 20)), // Font disesuaikan
+                  color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 20)),
           centerTitle: true,
           backgroundColor: AppColors.white,
           elevation: 1.0,
           foregroundColor: AppColors.primaryDark,
-          leading: IconButton( // Tombol kembali disesuaikan
+          leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryDark),
             onPressed: () => Navigator.pop(context),
           ),
         ),
         body: _isFetchingData
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary)) // Warna loading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
             : Stack(
                 children: [
                   Form(
@@ -340,7 +330,7 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
     );
   }
 
-  // --- UI WIDGETS (Disempurnakan dan Diterjemahkan) ---
+  // --- UI WIDGETS  ---
   Widget _buildSectionHeader(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 12.0),
         child: Text(title,
@@ -375,10 +365,10 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(13.0),
                         child: Image.memory(
-                          _currentImageDataBytes!, // Menampilkan gambar dari byte yang sudah ada
+                          _currentImageDataBytes!,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
-                            return Center(
+                            return const Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -417,31 +407,31 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
             TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(
-                    labelText: 'Nama Tempat', // Diterjemahkan
+                    labelText: 'Nama Tempat',
                     prefixIcon: Icon(Icons.place_outlined)),
                 validator: (v) =>
-                    v!.isEmpty ? 'Nama tempat wajib diisi' : null), // Diterjemahkan
+                    v!.isEmpty ? 'Nama tempat wajib diisi' : null),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedCategory,
               decoration: const InputDecoration(
-                  labelText: 'Kategori', // Diterjemahkan
+                  labelText: 'Kategori',
                   prefixIcon: Icon(Icons.category_outlined)),
               items: _categories
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                   .toList(),
               onChanged: (v) => setState(() => _selectedCategory = v),
-              validator: (v) => v == null ? 'Kategori wajib diisi' : null, // Diterjemahkan
+              validator: (v) => v == null ? 'Kategori wajib diisi' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(
-                    labelText: 'Deskripsi', // Diterjemahkan
+                    labelText: 'Deskripsi',
                     prefixIcon: Icon(Icons.description_outlined)),
                 maxLines: 4,
                 validator: (v) =>
-                    v!.isEmpty ? 'Deskripsi wajib diisi' : null), // Diterjemahkan
+                    v!.isEmpty ? 'Deskripsi wajib diisi' : null),
           ]),
         ),
       );
@@ -457,7 +447,7 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
               controller: _locationController,
               focusNode: _locationFocusNode,
               decoration: InputDecoration(
-                labelText: 'Cari alamat atau pilih di peta', // Diterjemahkan
+                labelText: 'Cari alamat atau pilih di peta',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _isLoadingLocation
                     ? const Padding(
@@ -467,7 +457,7 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
               ),
               onFieldSubmitted: (v) => _searchAddress(v),
               validator: (v) =>
-                  v!.isEmpty ? 'Lokasi wajib diisi' : null, // Diterjemahkan
+                  v!.isEmpty ? 'Lokasi wajib diisi' : null,
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -536,7 +526,7 @@ class _EditDestinationPageState extends State<EditDestinationPage> {
                     child:
                         CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                 : const Icon(Icons.save_outlined),
-            label: Text(_isSaving ? 'Menyimpan...' : 'Simpan Perubahan'), // Diterjemahkan
+            label: Text(_isSaving ? 'Menyimpan...' : 'Simpan Perubahan'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.lightTeal,
               foregroundColor: Colors.white,
