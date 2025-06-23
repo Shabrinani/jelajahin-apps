@@ -29,11 +29,11 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
   final MapController _mapController = MapController();
   double _overallRating = 3.0;
   XFile? _pickedImage;
-  Uint8List? _webImage;
+  Uint8List? _webImageBytes; // Ubah nama variabel untuk lebih jelas
   LatLng _selectedLatLng = const LatLng(-6.200000, 106.816666);
   bool _isUploading = false;
   bool _isLoadingLocation = false;
-  static const String _imgbbApiKey = '4000d7846dcaf738642127c07ddcfbed';
+  // static const String _imgbbApiKey = '4000d7846dcaf738642127c07ddcfbed'; // Dihapus karena tidak dipakai lagi
   String? _selectedCategory;
   final List<String> _categories = [
     'Restaurant', 'History', 'Nature', 'Museum', 'Beach',
@@ -48,8 +48,6 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         _searchAddress(_locationController.text);
       }
     });
-    // Panggil reverse geocode untuk mengisi _locationController saat awal
-    // Dengan lokasi default atau lokasi pengguna jika ada
     _reverseGeocode(_selectedLatLng);
   }
 
@@ -63,32 +61,21 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     super.dispose();
   }
 
-  Future<String> _uploadImageToImgbb(XFile imageFile) async {
-    final uri = Uri.parse('https://api.imgbb.com/1/upload');
-    final request = http.MultipartRequest('POST', uri)..fields['key'] = _imgbbApiKey;
-    if (kIsWeb) {
-      request.files.add(http.MultipartFile.fromBytes('image', _webImage!, filename: imageFile.name));
-    } else {
-      request.files.add(await http.MultipartFile.fromPath('image', imageFile.path, filename: imageFile.name));
-    }
-    final response = await request.send();
-    if (response.statusCode == 200) {
-      final responseBody = await response.stream.bytesToString();
-      final data = json.decode(responseBody);
-      if (data['success']) {
-        return data['data']['url'];
-      } else {
-        throw Exception('Imgbb upload failed: ${data['error']['message']}');
-      }
-    } else {
-      final errorBody = await response.stream.bytesToString();
-      throw Exception('Imgbb upload error. Status: ${response.statusCode}, Body: $errorBody');
-    }
-  }
+  // Hapus fungsi _uploadImageToImgbb sepenuhnya karena tidak lagi digunakan
+  // Future<String> _uploadImageToImgbb(XFile imageFile) async { ... }
 
   Future<void> _uploadDestination() async {
     if (!_formKey.currentState!.validate() || _pickedImage == null || _selectedCategory == null) {
       _showSnackBar('Mohon lengkapi semua data termasuk gambar dan kategori.');
+      return;
+    }
+
+    // Pastikan _webImageBytes sudah terisi untuk web atau _pickedImage untuk mobile
+    if (kIsWeb && _webImageBytes == null) {
+      _showSnackBar('Mohon pilih gambar terlebih dahulu (Web).');
+      return;
+    } else if (!kIsWeb && _pickedImage == null) {
+      _showSnackBar('Mohon pilih gambar terlebih dahulu (Mobile).');
       return;
     }
 
@@ -101,9 +88,27 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     setState(() => _isUploading = true);
 
     try {
-      final imageUrl = await _uploadImageToImgbb(_pickedImage!);
-      // Tidak perlu showSnackBar di sini, langsung menyimpan data
-      // _showSnackBar('Gambar berhasil diunggah! Menyimpan data...');
+      // Ambil byte gambar yang akan disimpan
+      Uint8List? imageDataBytes;
+      if (kIsWeb) {
+        imageDataBytes = _webImageBytes;
+      } else {
+        imageDataBytes = await _pickedImage!.readAsBytes();
+      }
+
+      if (imageDataBytes == null || imageDataBytes.isEmpty) {
+        throw Exception("Gagal mendapatkan data gambar.");
+      }
+
+      // Pastikan ukuran gambar tidak terlalu besar (kurang dari 1MB)
+      // Ini adalah batasan Firestore, bukan solusi jangka panjang
+      if (imageDataBytes.lengthInBytes > 1 * 1024 * 1024) { // 1MB
+        _showSnackBar('Ukuran gambar terlalu besar (maks 1MB). Mohon pilih gambar yang lebih kecil.', isError: true);
+        setState(() => _isUploading = false);
+        return;
+      }
+
+      _showSnackBar('Mengunggah data destinasi...', isError: false); // Feedback untuk pengguna
 
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
       final ownerName = userDoc.data()?['name'] ?? 'Anonim';
@@ -116,7 +121,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         'title': _nameController.text.trim(),
         'location': _locationController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'imageUrl': imageUrl,
+        'imageData': imageDataBytes.toList(), // Menyimpan Uint8List sebagai List<int>
         'latitude': _selectedLatLng.latitude,
         'longitude': _selectedLatLng.longitude,
         'rating': _overallRating,
@@ -221,7 +226,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         final bytes = await picked.readAsBytes();
         setState(() {
           _pickedImage = picked;
-          _webImage = bytes;
+          _webImageBytes = bytes; // Simpan ke _webImageBytes
         });
       } else {
         setState(() => _pickedImage = picked);
@@ -234,16 +239,17 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
+        // AppBar disesuaikan sesuai permintaan Anda
         appBar: AppBar(
           title: const Text(
             'Tambah Destinasi Baru',
-            style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 20), // Font disesuaikan
+            style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 20),
           ),
           centerTitle: true,
-          backgroundColor: AppColors.white,
-          foregroundColor: AppColors.primaryDark, // Warna ikon default
-          elevation: 1.0,
-          leading: IconButton( // Tombol kembali disesuaikan
+          backgroundColor: AppColors.white, // Latar belakang putih
+          foregroundColor: AppColors.primaryDark, // Warna ikon dan teks
+          elevation: 1.0, // Sedikit bayangan
+          leading: IconButton( // Tombol kembali yang konsisten
             icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryDark),
             onPressed: () => Navigator.pop(context),
           ),
@@ -258,7 +264,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionHeader('Foto Destinasi'),
-                    _buildImagePicker(),
+                    _buildImagePicker(), // Tetap menggunakan widget image picker lama
                     const SizedBox(height: 24),
                     _buildSectionHeader('Informasi Dasar'),
                     _buildInfoCard(),
@@ -279,7 +285,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     );
   }
 
-  // --- UI WIDGETS (Dengan Perbaikan) ---
+  // --- UI WIDGETS ---
   Widget _buildSectionHeader(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 12.0),
         child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
@@ -298,12 +304,17 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
             width: double.infinity,
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(15.0), color: Colors.grey.shade100),
             child: _pickedImage != null
-                ? ClipRRect(borderRadius: BorderRadius.circular(13.0), child: kIsWeb ? Image.memory(_webImage!, fit: BoxFit.cover) : Image.file(File(_pickedImage!.path), fit: BoxFit.cover))
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(13.0),
+                    child: kIsWeb
+                        ? Image.memory(_webImageBytes!, fit: BoxFit.cover) // Menggunakan _webImageBytes
+                        : Image.file(File(_pickedImage!.path), fit: BoxFit.cover),
+                  )
                 : const Center(
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(Icons.camera_alt_outlined, size: 50, color: Colors.grey),
                     SizedBox(height: 12),
-                    Text('Ketuk untuk memilih gambar', style: TextStyle(color: Colors.grey, fontSize: 16)), // Teks diubah ke Bahasa Indonesia
+                    Text('Ketuk untuk memilih gambar', style: TextStyle(color: Colors.grey, fontSize: 16)),
                   ])),
           ),
         ),
@@ -318,20 +329,20 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
           child: Column(children: [
             TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Nama Tempat', prefixIcon: Icon(Icons.place_outlined)), // Label Bahasa Indonesia
+                decoration: const InputDecoration(labelText: 'Nama Tempat', prefixIcon: Icon(Icons.place_outlined)),
                 validator: (v) => v!.isEmpty ? 'Nama tempat wajib diisi' : null),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedCategory,
-              decoration: const InputDecoration(labelText: 'Kategori', prefixIcon: Icon(Icons.category_outlined)), // Label Bahasa Indonesia
+              decoration: const InputDecoration(labelText: 'Kategori', prefixIcon: Icon(Icons.category_outlined)),
               items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
               onChanged: (v) => setState(() => _selectedCategory = v),
-              validator: (v) => v == null ? 'Kategori wajib diisi' : null, // Pesan Bahasa Indonesia
+              validator: (v) => v == null ? 'Kategori wajib diisi' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Deskripsi', prefixIcon: Icon(Icons.description_outlined)), // Label Bahasa Indonesia
+                decoration: const InputDecoration(labelText: 'Deskripsi', prefixIcon: Icon(Icons.description_outlined)),
                 maxLines: 4,
                 validator: (v) => v!.isEmpty ? 'Deskripsi wajib diisi' : null),
           ]),
@@ -349,7 +360,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
               controller: _locationController,
               focusNode: _locationFocusNode,
               decoration: InputDecoration(
-                labelText: 'Cari alamat atau pilih di peta', // Label Bahasa Indonesia
+                labelText: 'Cari alamat atau pilih di peta',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _isLoadingLocation ? const Padding(padding: EdgeInsets.all(10.0), child: CircularProgressIndicator(strokeWidth: 2)) : null,
               ),

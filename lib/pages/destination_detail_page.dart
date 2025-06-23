@@ -1,10 +1,13 @@
+import 'dart:math' as developer;
+import 'dart:typed_data'; // Import for Uint8List
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:jelajahin_apps/services/firestore_service.dart';
 import 'package:jelajahin_apps/theme/colors.dart';
 import 'package:jelajahin_apps/widgets/comment_section.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+// import 'package:cached_network_image/cached_network_image.dart'; // Hapus atau jadikan komentar
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -74,12 +77,18 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
 
           final destinationData = snapshot.data!.data() as Map<String, dynamic>;
 
-          final String imageUrl = destinationData['imageUrl'] ?? '';
+          // Ambil imageData sebagai List<dynamic> (karena Firestore menyimpan List<int>)
+          final List<dynamic>? imageDataList = destinationData['imageData'] as List<dynamic>?;
+          Uint8List? imageDataBytes;
+          if (imageDataList != null) {
+            imageDataBytes = Uint8List.fromList(imageDataList.cast<int>());
+          }
+          
           final String title = destinationData['title'] ?? 'Judul Tidak Tersedia';
           final String location = destinationData['location'] ?? 'Lokasi Tidak Tersedia';
           final String description = destinationData['description'] ?? 'Deskripsi tidak tersedia.';
           final String ownerName = destinationData['ownerName'] ?? 'Anonim';
-          final String ownerAvatar = destinationData['ownerAvatar'] ?? 'https://via.placeholder.com/150';
+          final String ownerAvatar = destinationData['ownerAvatar'] ?? 'https://via.placeholder.com/150'; // Avatar tetap URL
           final double rating = (destinationData['rating'] as num?)?.toDouble() ?? 0.0;
           final double latitude = (destinationData['latitude'] as num?)?.toDouble() ?? -6.200000;
           final double longitude = (destinationData['longitude'] as num?)?.toDouble() ?? 106.816666;
@@ -91,7 +100,7 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
           return CustomScrollView(
             controller: _scrollController,
             slivers: [
-              _buildEnhancedSliverAppBar(context, title, location, imageUrl, destinationId, isLiked, likes.length),
+              _buildEnhancedSliverAppBar(context, title, location, imageDataBytes, destinationId, isLiked, likes.length), // Pass imageDataBytes
               SliverList(
                 delegate: SliverChildListDelegate([
                   Padding(
@@ -102,17 +111,15 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
                         _buildOwnerAndRatingInfo(ownerAvatar, ownerName, rating),
                         const SizedBox(height: 20),
 
-                        // --- Urutan Baru: Deskripsi Dulu, Baru Lokasi ---
-                        _buildSectionHeader('Deskripsi'), // Header Deskripsi
+                        _buildSectionHeader('Deskripsi'),
                         Text(
                           description,
                           style: TextStyle(fontSize: 16, height: 1.5, color: Colors.grey[800]),
                         ),
-                        const SizedBox(height: 20), // Spasi antara deskripsi dan lokasi
+                        const SizedBox(height: 20),
 
-                        _buildSectionHeader('Lokasi'), // Header Lokasi
-                        _buildLocationDetail(location, destinationLatLng), // Peta Lokasi
-                        // --- Akhir Urutan Baru ---
+                        _buildSectionHeader('Lokasi'),
+                        _buildLocationDetail(location, destinationLatLng),
 
                         const Divider(height: 48, color: AppColors.lightGrey),
                         _buildCommentSection(destinationId),
@@ -128,13 +135,14 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
     );
   }
 
-  SliverAppBar _buildEnhancedSliverAppBar(BuildContext context, String title, String location, String imageUrl, String destinationId, bool isLiked, int likeCount) {
+  // Ubah signature agar menerima Uint8List? imageBytes
+  SliverAppBar _buildEnhancedSliverAppBar(BuildContext context, String title, String location, Uint8List? imageBytes, String destinationId, bool isLiked, int likeCount) {
     return SliverAppBar(
       expandedHeight: 300.0,
       pinned: true,
       stretch: true,
-      backgroundColor: AppColors.white,
-      foregroundColor: AppColors.primaryDark,
+      backgroundColor: _isAppBarCollapsed ? AppColors.white : Colors.transparent,
+      foregroundColor: _isAppBarCollapsed ? AppColors.primaryDark : Colors.white,
       elevation: _isAppBarCollapsed ? 4.0 : 0.0,
       shadowColor: Colors.black.withOpacity(0.2),
 
@@ -208,19 +216,24 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
           children: [
             Positioned.fill(
               child: Hero(
-                tag: 'post_image_${widget.destination['id'] ?? imageUrl}',
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey.shade300,
-                    child: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey.shade300,
-                    child: const Icon(Icons.broken_image_outlined, color: Colors.grey, size: 50),
-                  ),
-                ),
+                tag: 'post_image_$destinationId', // Tag hero harus unik dan konsisten
+                // Menggunakan Image.memory untuk menampilkan byte gambar
+                child: imageBytes != null && imageBytes.isNotEmpty
+                    ? Image.memory(
+                        imageBytes,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          developer.log('Error displaying image from bytes: $error' as num);
+                          return Container(
+                            color: Colors.grey.shade300,
+                            child: const Icon(Icons.broken_image_outlined, color: Colors.grey, size: 50),
+                          );
+                        },
+                      )
+                    : Container( // Placeholder jika imageBytes kosong
+                        color: Colors.grey.shade300,
+                        child: const Icon(Icons.broken_image_outlined, color: Colors.grey, size: 50),
+                      ),
               ),
             ),
             Align(

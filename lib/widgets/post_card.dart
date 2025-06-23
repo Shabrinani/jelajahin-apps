@@ -1,9 +1,12 @@
+import 'dart:math' as developer;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // Tetap diperlukan untuk ownerAvatar
 import 'package:jelajahin_apps/services/firestore_service.dart';
 import 'package:jelajahin_apps/theme/colors.dart';
+import 'dart:typed_data'; // Import untuk Uint8List
 
 // Helper untuk format waktu, pastikan sudah ditambahkan di pubspec.yaml
 import 'package:timeago/timeago.dart' as timeago;
@@ -17,7 +20,7 @@ class PostCard extends StatelessWidget {
   final String ownerAvatar;
   final VoidCallback onTap;
   final VoidCallback? onDelete; // Ini nullable
-  final VoidCallback? onEdit;   // Ini nullable
+  final VoidCallback? onEdit; // Ini nullable
 
   const PostCard({
     super.key,
@@ -26,7 +29,7 @@ class PostCard extends StatelessWidget {
     required this.ownerName,
     required this.ownerAvatar,
     this.onDelete, // Tidak wajib diisi
-    this.onEdit,   // Tidak wajib diisi
+    this.onEdit, // Tidak wajib diisi
   });
 
   @override
@@ -46,7 +49,20 @@ class PostCard extends StatelessWidget {
     // --- Mengambil data lain dari `postData` untuk tampilan ---
     final String title = postData['title'] ?? 'Tanpa Judul';
     final String location = postData['location'] ?? 'Tanpa Lokasi';
-    final String imageUrl = postData['imageUrl'] ?? 'https://placehold.co/600x400?text=No+Image';
+    // final String imageUrl = postData['imageUrl'] ?? 'https://placehold.co/600x400?text=No+Image'; // Hapus ini
+
+    // Ambil imageData sebagai List<dynamic> dari Firestore
+    final List<dynamic>? imageDataList = postData['imageData'] as List<dynamic>?;
+    Uint8List? imageDataBytes;
+    if (imageDataList != null && imageDataList.isNotEmpty) {
+      try {
+        imageDataBytes = Uint8List.fromList(imageDataList.cast<int>());
+      } catch (e) {
+        // Handle error jika casting gagal (misal data bukan list of int)
+        developer.log('Error casting imageData to Uint8List: $e' as num);
+        imageDataBytes = null; // Set null agar placeholder tampil
+      }
+    }
 
     // --- Penanganan Timestamp yang Aman ---
     final dynamic createdAtData = postData['createdAt'];
@@ -76,8 +92,10 @@ class PostCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundImage: CachedNetworkImageProvider(ownerAvatar),
+                    // Menggunakan CachedNetworkImageProvider untuk ownerAvatar
+                    backgroundImage: ownerAvatar.isNotEmpty ? CachedNetworkImageProvider(ownerAvatar) : null,
                     backgroundColor: Colors.grey.shade200,
+                    child: ownerAvatar.isEmpty ? const Icon(Icons.person, size: 24, color: Colors.grey) : null,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -99,9 +117,7 @@ class PostCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // *** PERUBAHAN PENTING DI SINI ***
                   // PopupMenuButton hanya akan dirender jika user adalah pemilik
-                  // DAN jika salah satu dari onDelete atau onEdit disediakan.
                   if (isOwner && (onDelete != null || onEdit != null))
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert, color: AppColors.primaryDark),
@@ -110,7 +126,6 @@ class PostCard extends StatelessWidget {
                         if (result == 'delete' && onDelete != null) onDelete!();
                       },
                       itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                        // Item menu hanya muncul jika callback-nya disediakan
                         if (onEdit != null)
                           const PopupMenuItem<String>(value: 'edit', child: Text('Edit Post')),
                         if (onDelete != null)
@@ -124,21 +139,24 @@ class PostCard extends StatelessWidget {
               ),
             ),
 
-            // --- Gambar Post ---
-            CachedNetworkImage(
-              imageUrl: imageUrl,
-              width: double.infinity,
-              height: 250,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
+            // --- Gambar Post (menggunakan Image.memory) ---
+            Hero( // Tetap gunakan Hero
+              tag: 'post_image_$destinationId', // Pastikan tag hero unik
+              child: Container(
+                width: double.infinity,
                 height: 250,
-                color: Colors.grey.shade200,
-                child: const Center(child: CircularProgressIndicator()),
-              ),
-              errorWidget: (context, url, error) => Container(
-                height: 250,
-                color: Colors.grey.shade200,
-                child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                color: Colors.grey.shade200, // Background placeholder
+                child: imageDataBytes != null && imageDataBytes.isNotEmpty
+                    ? Image.memory(
+                        imageDataBytes,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Center(child: Icon(Icons.broken_image, size: 50, color: Colors.grey));
+                        },
+                      )
+                    : const Center(
+                        child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey), // Ikon jika tidak ada gambar
+                      ),
               ),
             ),
 
@@ -175,7 +193,7 @@ class PostCard extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // --- Baris Aksi dan Statistik ---
             Padding(
               padding: const EdgeInsets.fromLTRB(8.0, 4.0, 16.0, 8.0),
@@ -196,16 +214,6 @@ class PostCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  // Helper widget untuk tombol aksi (Like, Komen)
-  Widget _buildActionButton({required IconData icon, Color? color, required VoidCallback onPressed}) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(icon, color: color ?? Colors.grey.shade800, size: 26),
-      splashRadius: 24,
-      padding: const EdgeInsets.all(8),
     );
   }
 
