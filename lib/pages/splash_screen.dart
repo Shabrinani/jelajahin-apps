@@ -62,10 +62,10 @@ class _SplashScreenState extends State<SplashScreen> {
               // Menggunakan salah satu gaya body dari tema
               // dan menimpa properti yang spesifik
               style: textTheme.bodyLarge?.copyWith(
-                color: AppColors.primaryDark, // Warna teks dari palet Anda
+                color: AppColors.black, // Warna teks dari palet Anda
                 fontSize: 16,               // Sesuaikan ukuran font
               ) ?? const TextStyle( // Fallback jika bodyLarge null
-                color: AppColors.primaryDark,
+                color: AppColors.black,
                 fontSize: 16,
               ),
             ),
