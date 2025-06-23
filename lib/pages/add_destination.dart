@@ -48,6 +48,8 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         _searchAddress(_locationController.text);
       }
     });
+    // Panggil reverse geocode untuk mengisi _locationController saat awal
+    // Dengan lokasi default atau lokasi pengguna jika ada
     _reverseGeocode(_selectedLatLng);
   }
 
@@ -89,23 +91,24 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
       _showSnackBar('Mohon lengkapi semua data termasuk gambar dan kategori.');
       return;
     }
-    
+
     final User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
       _showSnackBar('Anda harus login untuk menambahkan destinasi.');
       return;
     }
-    
+
     setState(() => _isUploading = true);
 
     try {
       final imageUrl = await _uploadImageToImgbb(_pickedImage!);
-      _showSnackBar('Gambar berhasil diunggah! Menyimpan data...');
-      
+      // Tidak perlu showSnackBar di sini, langsung menyimpan data
+      // _showSnackBar('Gambar berhasil diunggah! Menyimpan data...');
+
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
       final ownerName = userDoc.data()?['name'] ?? 'Anonim';
       final ownerAvatar = userDoc.data()?['profile_picture_url'] ?? 'https://via.placeholder.com/150';
-      
+
       final String destinationId = const Uuid().v4();
 
       await FirebaseFirestore.instance.collection('destinations').doc(destinationId).set({
@@ -122,7 +125,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         'ownerId': currentUser.uid,
         'ownerName': ownerName,
         'ownerAvatar': ownerAvatar,
-        'likes': [], 
+        'likes': [],
         'commentCount': 0,
       });
 
@@ -141,7 +144,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
       }
     }
   }
-  
+
   void _showSnackBar(String message, {bool isError = false}) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -202,7 +205,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
       if (mounted) setState(() => _isLoadingLocation = false);
     }
   }
-  
+
   Future<bool> _onWillPop() async {
     if (_isUploading) {
       _showSnackBar('Tunggu proses upload selesai.');
@@ -210,7 +213,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     }
     return true;
   }
-  
+
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) {
@@ -225,16 +228,25 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Tambah Destinasi Baru'), centerTitle: true,
-          backgroundColor: AppColors.white, foregroundColor: AppColors.primaryDark,
+          title: const Text(
+            'Tambah Destinasi Baru',
+            style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 20), // Font disesuaikan
+          ),
+          centerTitle: true,
+          backgroundColor: AppColors.white,
+          foregroundColor: AppColors.primaryDark, // Warna ikon default
           elevation: 1.0,
+          leading: IconButton( // Tombol kembali disesuaikan
+            icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryDark),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
         body: Stack(
           children: [
@@ -272,56 +284,72 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         padding: const EdgeInsets.only(bottom: 12.0),
         child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
       );
-  
+
   Widget _buildImagePicker() => GestureDetector(
         onTap: _isUploading ? null : _pickImage,
         child: DottedBorder(
-          color: Colors.grey, // DIUBAH: Menggunakan warna standar dari Flutter
-          strokeWidth: 2, dashPattern: const [8, 4],
-          borderType: BorderType.RRect, radius: const Radius.circular(15),
+          color: Colors.grey,
+          strokeWidth: 2,
+          dashPattern: const [8, 4],
+          borderType: BorderType.RRect,
+          radius: const Radius.circular(15),
           child: Container(
-            height: 200, width: double.infinity,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(15.0), color: Colors.grey.shade100), // DIUBAH
+            height: 200,
+            width: double.infinity,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(15.0), color: Colors.grey.shade100),
             child: _pickedImage != null
                 ? ClipRRect(borderRadius: BorderRadius.circular(13.0), child: kIsWeb ? Image.memory(_webImage!, fit: BoxFit.cover) : Image.file(File(_pickedImage!.path), fit: BoxFit.cover))
-                : const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(Icons.camera_alt_outlined, size: 50, color: Colors.grey), // DIUBAH
-                      SizedBox(height: 12),
-                      Text('Tap to select an image', style: TextStyle(color: Colors.grey, fontSize: 16)), // DIUBAH
-                    ])),
+                : const Center(
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.camera_alt_outlined, size: 50, color: Colors.grey),
+                    SizedBox(height: 12),
+                    Text('Ketuk untuk memilih gambar', style: TextStyle(color: Colors.grey, fontSize: 16)), // Teks diubah ke Bahasa Indonesia
+                  ])),
           ),
         ),
       );
 
   Widget _buildInfoCard() => Card(
-        elevation: 2, shadowColor: Colors.black.withOpacity(0.1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(children: [
-            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Place Name', prefixIcon: Icon(Icons.place_outlined)), validator: (v) => v!.isEmpty ? 'Nama tempat wajib diisi' : null),
+            TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Nama Tempat', prefixIcon: Icon(Icons.place_outlined)), // Label Bahasa Indonesia
+                validator: (v) => v!.isEmpty ? 'Nama tempat wajib diisi' : null),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedCategory,
-              decoration: const InputDecoration(labelText: 'Category', prefixIcon: Icon(Icons.category_outlined)),
+              decoration: const InputDecoration(labelText: 'Kategori', prefixIcon: Icon(Icons.category_outlined)), // Label Bahasa Indonesia
               items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
               onChanged: (v) => setState(() => _selectedCategory = v),
-              validator: (v) => v == null ? 'Category is required' : null,
+              validator: (v) => v == null ? 'Kategori wajib diisi' : null, // Pesan Bahasa Indonesia
             ),
             const SizedBox(height: 16),
-            TextFormField(controller: _descriptionController, decoration: const InputDecoration(labelText: 'Description', prefixIcon: Icon(Icons.description_outlined)), maxLines: 4, validator: (v) => v!.isEmpty ? 'Deskripsi wajib diisi' : null),
+            TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Deskripsi', prefixIcon: Icon(Icons.description_outlined)), // Label Bahasa Indonesia
+                maxLines: 4,
+                validator: (v) => v!.isEmpty ? 'Deskripsi wajib diisi' : null),
           ]),
         ),
       );
 
   Widget _buildLocationCard() => Card(
-        elevation: 2, shadowColor: Colors.black.withOpacity(0.1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(children: [
             TextFormField(
-              controller: _locationController, focusNode: _locationFocusNode,
+              controller: _locationController,
+              focusNode: _locationFocusNode,
               decoration: InputDecoration(
-                labelText: 'Cari alamat atau pilih di peta',
+                labelText: 'Cari alamat atau pilih di peta', // Label Bahasa Indonesia
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _isLoadingLocation ? const Padding(padding: EdgeInsets.all(10.0), child: CircularProgressIndicator(strokeWidth: 2)) : null,
               ),
@@ -348,7 +376,9 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
       );
 
   Widget _buildRatingCard() => Card(
-        elevation: 2, shadowColor: Colors.black.withOpacity(0.1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -373,7 +403,8 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
             icon: _isUploading ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3)) : const Icon(Icons.cloud_upload_outlined),
             label: Text(_isUploading ? 'Mengunggah...' : 'Simpan Destinasi'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.lightTeal, foregroundColor: Colors.white,
+              backgroundColor: AppColors.lightTeal,
+              foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
