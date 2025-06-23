@@ -105,7 +105,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- PERUBAHAN UTAMA: Search Bar menjadi TextField Fungsional ---
   Widget _buildSearchBar() {
     return TextField(
       controller: _searchController,
@@ -163,20 +162,22 @@ class _HomePageState extends State<HomePage> {
               return const Center(child: Text('Tidak ada postingan yang tersedia.'));
             }
 
-            // --- PERUBAHAN UTAMA: Logika Filtering ---
+            // Logika Filtering: Cari berdasarkan judul ATAU lokasi
             final allPosts = snapshot.data!;
             final filteredPosts = _searchQuery.isEmpty
                 ? allPosts
                 : allPosts.where((post) {
                     final title = post['title']?.toString().toLowerCase() ?? '';
-                    return title.contains(_searchQuery.toLowerCase());
+                    final location = post['location']?.toString().toLowerCase() ?? '';
+                    return title.contains(_searchQuery.toLowerCase()) ||
+                           location.contains(_searchQuery.toLowerCase());
                   }).toList();
 
             if (filteredPosts.isEmpty) {
               return const Center(
                 child: Padding(
                   padding: EdgeInsets.all(32.0),
-                  child: Text('Destinasi tidak ditemukan.'),
+                  child: Text('Tidak ada destinasi yang ditemukan sesuai pencarian Anda.'),
                 ),
               );
             }
@@ -190,8 +191,8 @@ class _HomePageState extends State<HomePage> {
                 
                 return PostCard(
                   postData: postData,
-                  ownerName: postData['ownerName'] ?? 'Anonim',
-                  ownerAvatar: postData['ownerAvatar'] ?? '',
+                  ownerName: postData['ownerName'] ?? 'Anonim', 
+                  ownerAvatar: postData['ownerAvatar'] ?? 'https://via.placeholder.com/150',
                   onTap: () {
                     // Sembunyikan keyboard saat navigasi
                     FocusScope.of(context).unfocus(); 
@@ -202,6 +203,13 @@ class _HomePageState extends State<HomePage> {
                       ),
                     );
                   },
+                  // *** INI ADALAH KUNCI UTAMA ***
+                  // Tidak memberikan 'onDelete' dan 'onEdit' di sini.
+                  // Karena parameternya nullable di PostCard, tidak menyediakannya
+                  // akan otomatis menjadikannya null. Ini akan mencegah
+                  // PopupMenuButton dan item menu terkait muncul di HomePage.
+                  // onDelete: null, // Tidak perlu ditulis eksplisit jika tidak ada handler
+                  // onEdit: null,   // Tidak perlu ditulis eksplisit jika tidak ada handler
                 );
               },
             );

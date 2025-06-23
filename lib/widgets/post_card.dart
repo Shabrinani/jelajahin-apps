@@ -16,8 +16,8 @@ class PostCard extends StatelessWidget {
   final String ownerName;
   final String ownerAvatar;
   final VoidCallback onTap;
-  final VoidCallback? onDelete;
-  final VoidCallback? onEdit;
+  final VoidCallback? onDelete; // Ini nullable
+  final VoidCallback? onEdit;   // Ini nullable
 
   const PostCard({
     super.key,
@@ -25,8 +25,8 @@ class PostCard extends StatelessWidget {
     required this.onTap,
     required this.ownerName,
     required this.ownerAvatar,
-    this.onDelete,
-    this.onEdit,
+    this.onDelete, // Tidak wajib diisi
+    this.onEdit,   // Tidak wajib diisi
   });
 
   @override
@@ -40,6 +40,7 @@ class PostCard extends StatelessWidget {
     final String destinationId = postData['id'] ?? '';
     final String ownerId = postData['ownerId'] ?? '';
     final bool isLiked = likes.contains(currentUser?.uid);
+    // isOwner akan true jika user yang sedang login adalah pemilik postingan
     final bool isOwner = currentUser?.uid == ownerId;
 
     // --- Mengambil data lain dari `postData` untuk tampilan ---
@@ -47,11 +48,11 @@ class PostCard extends StatelessWidget {
     final String location = postData['location'] ?? 'Tanpa Lokasi';
     final String imageUrl = postData['imageUrl'] ?? 'https://placehold.co/600x400?text=No+Image';
 
-    // --- PERBAIKAN: Penanganan Timestamp yang Aman ---
+    // --- Penanganan Timestamp yang Aman ---
     final dynamic createdAtData = postData['createdAt'];
     String timeAgo = 'Baru saja';
     if (createdAtData is Timestamp) {
-      // Mengatur lokal 'timeago' ke Bahasa Indonesia agar outputnya "beberapa detik yang lalu"
+      // Mengatur lokal 'timeago' ke Bahasa Indonesia
       timeago.setLocaleMessages('id', timeago.IdMessages());
       timeAgo = timeago.format(createdAtData.toDate(), locale: 'id');
     }
@@ -98,7 +99,10 @@ class PostCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (isOwner)
+                  // *** PERUBAHAN PENTING DI SINI ***
+                  // PopupMenuButton hanya akan dirender jika user adalah pemilik
+                  // DAN jika salah satu dari onDelete atau onEdit disediakan.
+                  if (isOwner && (onDelete != null || onEdit != null))
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert, color: AppColors.primaryDark),
                       onSelected: (String result) {
@@ -106,6 +110,7 @@ class PostCard extends StatelessWidget {
                         if (result == 'delete' && onDelete != null) onDelete!();
                       },
                       itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                        // Item menu hanya muncul jika callback-nya disediakan
                         if (onEdit != null)
                           const PopupMenuItem<String>(value: 'edit', child: Text('Edit Post')),
                         if (onDelete != null)
@@ -171,7 +176,7 @@ class PostCard extends StatelessWidget {
               ),
             ),
             
-            // --- PERBAIKAN FINAL: Baris Aksi dan Statistik yang Menyatu ---
+            // --- Baris Aksi dan Statistik ---
             Padding(
               padding: const EdgeInsets.fromLTRB(8.0, 4.0, 16.0, 8.0),
               child: Row(
