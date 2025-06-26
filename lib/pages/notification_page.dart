@@ -1,6 +1,9 @@
+// Import pustaka utama Flutter dan warna dari konfigurasi global aplikasi
 import 'package:flutter/material.dart';
 import 'package:jelajahin_apps/main.dart';
 
+/// Halaman NotificationPage berfungsi untuk menampilkan semua notifikasi aplikasi.
+/// Menggunakan TabBar untuk memfilter berdasarkan tipe (All, System, User).
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
 
@@ -10,14 +13,16 @@ class NotificationPage extends StatefulWidget {
 
 class _NotificationPageState extends State<NotificationPage>
     with SingleTickerProviderStateMixin {
+  // Controller untuk mengatur tab navigasi antar jenis notifikasi
   late TabController _tabController;
 
+  // Daftar notifikasi yang ditampilkan (data dummy)
   final List<Map<String, dynamic>> _notifications = [
     {
       'title': 'Selamat Datang di Jelajahin!',
       'subtitle': 'Terima kasih telah bergabung dengan Jelajahin. Yuk mulai eksplorasi!',
-      'read': false,
-      'type': 'system',
+      'read': false, // Belum dibaca
+      'type': 'system', // Tipe notifikasi: system
     },
     {
       'title': 'Postinganmu disukai!',
@@ -36,6 +41,7 @@ class _NotificationPageState extends State<NotificationPage>
   @override
   void initState() {
     super.initState();
+    // Inisialisasi TabController dengan 3 tab (All, System, User)
     _tabController = TabController(length: 3, vsync: this);
   }
 
@@ -45,6 +51,7 @@ class _NotificationPageState extends State<NotificationPage>
     super.dispose();
   }
 
+  /// Fungsi untuk memfilter daftar notifikasi sesuai tipe tab aktif
   List<Map<String, dynamic>> _filteredNotifications(String type) {
     if (type == 'all') return _notifications;
     return _notifications.where((n) => n['type'] == type).toList();
@@ -61,6 +68,7 @@ class _NotificationPageState extends State<NotificationPage>
           style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        // TabBar di bawah AppBar untuk filter jenis notifikasi
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.primaryDark,
@@ -73,6 +81,7 @@ class _NotificationPageState extends State<NotificationPage>
           ],
         ),
       ),
+      // Konten body menggunakan TabBarView agar sinkron dengan TabBar
       body: TabBarView(
         controller: _tabController,
         children: [
@@ -84,6 +93,7 @@ class _NotificationPageState extends State<NotificationPage>
     );
   }
 
+  /// Menampilkan daftar notifikasi dalam bentuk ListView
   Widget _buildNotificationList(String type) {
     final filtered = _filteredNotifications(type);
     return ListView.separated(
@@ -95,8 +105,10 @@ class _NotificationPageState extends State<NotificationPage>
         return InkWell(
           onTap: () {
             setState(() {
-              notif['read'] = true;
+              notif['read'] = true; // Tandai sebagai sudah dibaca
             });
+
+            // Notifikasi spesifik: tampilkan dialog jika notifikasi sambutan
             if (notif['title'] == 'Selamat Datang di Jelajahin!') {
               showDialog(
                 context: context,

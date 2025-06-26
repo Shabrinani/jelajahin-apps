@@ -228,7 +228,6 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                       );
                     },
-                // onDelete tidak diteruskan, sehingga tombol delete tidak muncul
               );
             },
           ),

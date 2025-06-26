@@ -1,3 +1,4 @@
+// Import berbagai pustaka Flutter, Firebase, dan pustaka pendukung lainnya
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,9 @@ import 'dart:developer' as developer;
 import 'package:dotted_border/dotted_border.dart';
 import '../theme/colors.dart';
 
+/// Halaman untuk menambahkan destinasi wisata baru.
+/// Pengguna bisa mengunggah foto, menulis nama, lokasi, deskripsi, memilih kategori,
+/// serta memilih lokasi dari peta dan memberikan rating.
 class AddDestinationScreen extends StatefulWidget {
   const AddDestinationScreen({super.key});
 
@@ -21,19 +25,35 @@ class AddDestinationScreen extends StatefulWidget {
 }
 
 class _AddDestinationScreenState extends State<AddDestinationScreen> {
+  // Key form utama
   final _formKey = GlobalKey<FormState>();
+
+  // Controller untuk field input teks
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
+
+  // Fokus input lokasi agar saat blur bisa trigger pencarian otomatis
   final FocusNode _locationFocusNode = FocusNode();
+
+  // Kontrol peta
   final MapController _mapController = MapController();
+
+  // Nilai rating default
   double _overallRating = 3.0;
+
+  // Variabel penyimpanan gambar dan data byte gambar (untuk upload)
   XFile? _pickedImage;
   Uint8List? _webImageBytes;
+
+  // Koordinat destinasi terpilih (default: Jakarta)
   LatLng _selectedLatLng = const LatLng(-6.200000, 106.816666);
+
+  // Status untuk loading dan proses upload
   bool _isUploading = false;
   bool _isLoadingLocation = false;
-  // static const String _imgbbApiKey = '4000d7846dcaf738642127c07ddcfbed';
+
+  // Kategori destinasi
   String? _selectedCategory;
   final List<String> _categories = [
     'Restaurant', 'History', 'Nature', 'Museum', 'Beach',
@@ -61,14 +81,14 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     super.dispose();
   }
 
-  /// Fungsi untuk mengunggah destinasi baru
+  /// Fungsi utama untuk mengunggah data destinasi ke Firebase.
+  /// Validasi form, unggah gambar (dalam bentuk byte), dan simpan data ke koleksi Firestore.
   Future<void> _uploadDestination() async {
     if (!_formKey.currentState!.validate() || _pickedImage == null || _selectedCategory == null) {
       _showSnackBar('Mohon lengkapi semua data termasuk gambar dan kategori.');
       return;
     }
 
-    // Pastikan _webImageBytes sudah terisi
     if (kIsWeb && _webImageBytes == null) {
       _showSnackBar('Mohon pilih gambar terlebih dahulu (Web).');
       return;
@@ -86,7 +106,6 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     setState(() => _isUploading = true);
 
     try {
-      // Ambil byte gambar yang akan disimpan
       Uint8List? imageDataBytes;
       if (kIsWeb) {
         imageDataBytes = _webImageBytes;
@@ -98,7 +117,6 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         throw Exception("Gagal mendapatkan data gambar.");
       }
 
-      // Pastikan ukuran gambar tidak terlalu besar (kurang dari 1MB)
       if (imageDataBytes.lengthInBytes > 1 * 1024 * 1024) {
         _showSnackBar('Ukuran gambar terlalu besar (maks 1MB). Mohon pilih gambar yang lebih kecil.', isError: true);
         setState(() => _isUploading = false);
@@ -134,7 +152,6 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
       if (!mounted) return;
       _showSnackBar('Destinasi berhasil ditambahkan!');
       Navigator.pop(context);
-
     } catch (e) {
       developer.log('Error uploading destination: $e');
       if (mounted) {
@@ -147,6 +164,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     }
   }
 
+  /// Menampilkan feedback snackbar di bawah layar
   void _showSnackBar(String message, {bool isError = false}) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -158,6 +176,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     }
   }
 
+  /// Fungsi reverse geocoding untuk mengubah koordinat ke alamat teks
   Future<void> _reverseGeocode(LatLng latLng) async {
     if (!mounted) return;
     setState(() => _isLoadingLocation = true);
@@ -178,6 +197,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     }
   }
 
+  /// Mencari alamat berdasarkan input teks (geocoding)
   Future<void> _searchAddress(String query) async {
     if (query.isEmpty) return;
     if (!mounted) return;
@@ -208,6 +228,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     }
   }
 
+  /// Cegah kembali saat proses upload sedang berlangsung
   Future<bool> _onWillPop() async {
     if (_isUploading) {
       _showSnackBar('Tunggu proses upload selesai.');
@@ -216,6 +237,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     return true;
   }
 
+  /// Pilih gambar dari galeri
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) {
@@ -281,12 +303,14 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     );
   }
 
-  // --- UI WIDGETS ---
+  // === WIDGET PEMBANTU UI ===
+
   Widget _buildSectionHeader(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 12.0),
         child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
       );
 
+  /// Widget pemilih gambar (dengan batasan + preview)
   Widget _buildImagePicker() => GestureDetector(
         onTap: _isUploading ? null : _pickImage,
         child: DottedBorder(
