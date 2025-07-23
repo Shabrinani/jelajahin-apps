@@ -1,3 +1,4 @@
+// Import berbagai pustaka Flutter, Firebase, dan pustaka pendukung lainnya
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,9 @@ import 'dart:developer' as developer;
 import 'package:dotted_border/dotted_border.dart';
 import '../theme/colors.dart';
 
+/// Halaman untuk menambahkan destinasi wisata baru.
+/// Pengguna bisa mengunggah foto, menulis nama, lokasi, deskripsi, memilih kategori,
+/// serta memilih lokasi dari peta dan memberikan rating.
 class AddDestinationScreen extends StatefulWidget {
   const AddDestinationScreen({super.key});
 
@@ -21,19 +25,35 @@ class AddDestinationScreen extends StatefulWidget {
 }
 
 class _AddDestinationScreenState extends State<AddDestinationScreen> {
+  // Key form utama
   final _formKey = GlobalKey<FormState>();
+
+  // Controller untuk field input teks
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
+
+  // Fokus input lokasi agar saat blur bisa trigger pencarian otomatis
   final FocusNode _locationFocusNode = FocusNode();
+
+  // Kontrol peta
   final MapController _mapController = MapController();
+
+  // Nilai rating default
   double _overallRating = 3.0;
+
+  // Variabel penyimpanan gambar dan data byte gambar (untuk upload)
   XFile? _pickedImage;
-  Uint8List? _webImage;
+  Uint8List? _webImageBytes;
+
+  // Koordinat destinasi terpilih (default: Jakarta)
   LatLng _selectedLatLng = const LatLng(-6.200000, 106.816666);
+
+  // Status untuk loading dan proses upload
   bool _isUploading = false;
   bool _isLoadingLocation = false;
-  static const String _imgbbApiKey = '4000d7846dcaf738642127c07ddcfbed';
+
+  // Kategori destinasi
   String? _selectedCategory;
   final List<String> _categories = [
     'Restaurant', 'History', 'Nature', 'Museum', 'Beach',
@@ -61,51 +81,54 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     super.dispose();
   }
 
-  Future<String> _uploadImageToImgbb(XFile imageFile) async {
-    final uri = Uri.parse('https://api.imgbb.com/1/upload');
-    final request = http.MultipartRequest('POST', uri)..fields['key'] = _imgbbApiKey;
-    if (kIsWeb) {
-      request.files.add(http.MultipartFile.fromBytes('image', _webImage!, filename: imageFile.name));
-    } else {
-      request.files.add(await http.MultipartFile.fromPath('image', imageFile.path, filename: imageFile.name));
-    }
-    final response = await request.send();
-    if (response.statusCode == 200) {
-      final responseBody = await response.stream.bytesToString();
-      final data = json.decode(responseBody);
-      if (data['success']) {
-        return data['data']['url'];
-      } else {
-        throw Exception('Imgbb upload failed: ${data['error']['message']}');
-      }
-    } else {
-      final errorBody = await response.stream.bytesToString();
-      throw Exception('Imgbb upload error. Status: ${response.statusCode}, Body: $errorBody');
-    }
-  }
-
+  /// Fungsi utama untuk mengunggah data destinasi ke Firebase.
+  /// Validasi form, unggah gambar (dalam bentuk byte), dan simpan data ke koleksi Firestore.
   Future<void> _uploadDestination() async {
     if (!_formKey.currentState!.validate() || _pickedImage == null || _selectedCategory == null) {
       _showSnackBar('Mohon lengkapi semua data termasuk gambar dan kategori.');
       return;
     }
-    
+
+    if (kIsWeb && _webImageBytes == null) {
+      _showSnackBar('Mohon pilih gambar terlebih dahulu (Web).');
+      return;
+    } else if (!kIsWeb && _pickedImage == null) {
+      _showSnackBar('Mohon pilih gambar terlebih dahulu (Mobile).');
+      return;
+    }
+
     final User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
       _showSnackBar('Anda harus login untuk menambahkan destinasi.');
       return;
     }
-    
+
     setState(() => _isUploading = true);
 
     try {
-      final imageUrl = await _uploadImageToImgbb(_pickedImage!);
-      _showSnackBar('Gambar berhasil diunggah! Menyimpan data...');
-      
+      Uint8List? imageDataBytes;
+      if (kIsWeb) {
+        imageDataBytes = _webImageBytes;
+      } else {
+        imageDataBytes = await _pickedImage!.readAsBytes();
+      }
+
+      if (imageDataBytes == null || imageDataBytes.isEmpty) {
+        throw Exception("Gagal mendapatkan data gambar.");
+      }
+
+      if (imageDataBytes.lengthInBytes > 1 * 1024 * 1024) {
+        _showSnackBar('Ukuran gambar terlalu besar (maks 1MB). Mohon pilih gambar yang lebih kecil.', isError: true);
+        setState(() => _isUploading = false);
+        return;
+      }
+
+      _showSnackBar('Mengunggah data destinasi...', isError: false);
+
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
       final ownerName = userDoc.data()?['name'] ?? 'Anonim';
       final ownerAvatar = userDoc.data()?['profile_picture_url'] ?? 'https://via.placeholder.com/150';
-      
+
       final String destinationId = const Uuid().v4();
 
       await FirebaseFirestore.instance.collection('destinations').doc(destinationId).set({
@@ -113,7 +136,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         'title': _nameController.text.trim(),
         'location': _locationController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'imageUrl': imageUrl,
+        'imageData': imageDataBytes.toList(),
         'latitude': _selectedLatLng.latitude,
         'longitude': _selectedLatLng.longitude,
         'rating': _overallRating,
@@ -122,14 +145,13 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         'ownerId': currentUser.uid,
         'ownerName': ownerName,
         'ownerAvatar': ownerAvatar,
-        'likes': [], 
+        'likes': [],
         'commentCount': 0,
       });
 
       if (!mounted) return;
       _showSnackBar('Destinasi berhasil ditambahkan!');
       Navigator.pop(context);
-
     } catch (e) {
       developer.log('Error uploading destination: $e');
       if (mounted) {
@@ -141,7 +163,8 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
       }
     }
   }
-  
+
+  /// Menampilkan feedback snackbar di bawah layar
   void _showSnackBar(String message, {bool isError = false}) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -153,6 +176,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     }
   }
 
+  /// Fungsi reverse geocoding untuk mengubah koordinat ke alamat teks
   Future<void> _reverseGeocode(LatLng latLng) async {
     if (!mounted) return;
     setState(() => _isLoadingLocation = true);
@@ -173,6 +197,7 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     }
   }
 
+  /// Mencari alamat berdasarkan input teks (geocoding)
   Future<void> _searchAddress(String query) async {
     if (query.isEmpty) return;
     if (!mounted) return;
@@ -202,7 +227,8 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
       if (mounted) setState(() => _isLoadingLocation = false);
     }
   }
-  
+
+  /// Cegah kembali saat proses upload sedang berlangsung
   Future<bool> _onWillPop() async {
     if (_isUploading) {
       _showSnackBar('Tunggu proses upload selesai.');
@@ -210,7 +236,8 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     }
     return true;
   }
-  
+
+  /// Pilih gambar dari galeri
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) {
@@ -218,23 +245,32 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
         final bytes = await picked.readAsBytes();
         setState(() {
           _pickedImage = picked;
-          _webImage = bytes;
+          _webImageBytes = bytes;
         });
       } else {
         setState(() => _pickedImage = picked);
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Tambah Destinasi Baru'), centerTitle: true,
-          backgroundColor: AppColors.white, foregroundColor: AppColors.primaryDark,
+          title: const Text(
+            'Tambah Destinasi Baru',
+            style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 20),
+          ),
+          centerTitle: true,
+          backgroundColor: AppColors.white,
+          foregroundColor: AppColors.primaryDark,
           elevation: 1.0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryDark),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
         body: Stack(
           children: [
@@ -267,59 +303,82 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
     );
   }
 
-  // --- UI WIDGETS (Dengan Perbaikan) ---
+  // === WIDGET PEMBANTU UI ===
+
   Widget _buildSectionHeader(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 12.0),
         child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
       );
-  
+
+  /// Widget pemilih gambar (dengan batasan + preview)
   Widget _buildImagePicker() => GestureDetector(
         onTap: _isUploading ? null : _pickImage,
         child: DottedBorder(
-          color: Colors.grey, // DIUBAH: Menggunakan warna standar dari Flutter
-          strokeWidth: 2, dashPattern: const [8, 4],
-          borderType: BorderType.RRect, radius: const Radius.circular(15),
+          color: Colors.grey,
+          strokeWidth: 2,
+          dashPattern: const [8, 4],
+          borderType: BorderType.RRect,
+          radius: const Radius.circular(15),
           child: Container(
-            height: 200, width: double.infinity,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(15.0), color: Colors.grey.shade100), // DIUBAH
+            height: 200,
+            width: double.infinity,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(15.0), color: Colors.grey.shade100),
             child: _pickedImage != null
-                ? ClipRRect(borderRadius: BorderRadius.circular(13.0), child: kIsWeb ? Image.memory(_webImage!, fit: BoxFit.cover) : Image.file(File(_pickedImage!.path), fit: BoxFit.cover))
-                : const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(Icons.camera_alt_outlined, size: 50, color: Colors.grey), // DIUBAH
-                      SizedBox(height: 12),
-                      Text('Tap to select an image', style: TextStyle(color: Colors.grey, fontSize: 16)), // DIUBAH
-                    ])),
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(13.0),
+                    child: kIsWeb
+                        ? Image.memory(_webImageBytes!, fit: BoxFit.cover)
+                        : Image.file(File(_pickedImage!.path), fit: BoxFit.cover),
+                  )
+                : const Center(
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.camera_alt_outlined, size: 50, color: Colors.grey),
+                    SizedBox(height: 12),
+                    Text('Ketuk untuk memilih gambar', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  ])),
           ),
         ),
       );
 
   Widget _buildInfoCard() => Card(
-        elevation: 2, shadowColor: Colors.black.withOpacity(0.1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(children: [
-            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Place Name', prefixIcon: Icon(Icons.place_outlined)), validator: (v) => v!.isEmpty ? 'Nama tempat wajib diisi' : null),
+            TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Nama Tempat', prefixIcon: Icon(Icons.place_outlined)),
+                validator: (v) => v!.isEmpty ? 'Nama tempat wajib diisi' : null),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedCategory,
-              decoration: const InputDecoration(labelText: 'Category', prefixIcon: Icon(Icons.category_outlined)),
+              decoration: const InputDecoration(labelText: 'Kategori', prefixIcon: Icon(Icons.category_outlined)),
               items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
               onChanged: (v) => setState(() => _selectedCategory = v),
-              validator: (v) => v == null ? 'Category is required' : null,
+              validator: (v) => v == null ? 'Kategori wajib diisi' : null,
             ),
             const SizedBox(height: 16),
-            TextFormField(controller: _descriptionController, decoration: const InputDecoration(labelText: 'Description', prefixIcon: Icon(Icons.description_outlined)), maxLines: 4, validator: (v) => v!.isEmpty ? 'Deskripsi wajib diisi' : null),
+            TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Deskripsi', prefixIcon: Icon(Icons.description_outlined)),
+                maxLines: 4,
+                validator: (v) => v!.isEmpty ? 'Deskripsi wajib diisi' : null),
           ]),
         ),
       );
 
   Widget _buildLocationCard() => Card(
-        elevation: 2, shadowColor: Colors.black.withOpacity(0.1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(children: [
             TextFormField(
-              controller: _locationController, focusNode: _locationFocusNode,
+              controller: _locationController,
+              focusNode: _locationFocusNode,
               decoration: InputDecoration(
                 labelText: 'Cari alamat atau pilih di peta',
                 prefixIcon: const Icon(Icons.search),
@@ -348,7 +407,9 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
       );
 
   Widget _buildRatingCard() => Card(
-        elevation: 2, shadowColor: Colors.black.withOpacity(0.1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -373,7 +434,8 @@ class _AddDestinationScreenState extends State<AddDestinationScreen> {
             icon: _isUploading ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3)) : const Icon(Icons.cloud_upload_outlined),
             label: Text(_isUploading ? 'Mengunggah...' : 'Simpan Destinasi'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.lightTeal, foregroundColor: Colors.white,
+              backgroundColor: AppColors.lightTeal,
+              foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

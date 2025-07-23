@@ -21,7 +21,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Listener untuk memperbarui UI setiap kali teks di search bar berubah
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
@@ -56,7 +55,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               _buildHeader(textTheme),
               const SizedBox(height: 24),
-              _buildSearchBar(), // Search bar sekarang fungsional
+              _buildSearchBar(),
               const SizedBox(height: 24),
               _buildRecentPostsSection(textTheme),
             ],
@@ -133,7 +132,7 @@ class _HomePageState extends State<HomePage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(25),
-          borderSide: BorderSide(color: AppColors.darkTeal, width: 2),
+          borderSide: const BorderSide(color: AppColors.darkTeal, width: 2),
         ),
       ),
     );
@@ -194,7 +193,6 @@ class _HomePageState extends State<HomePage> {
                   ownerName: postData['ownerName'] ?? 'Anonim', 
                   ownerAvatar: postData['ownerAvatar'] ?? 'https://via.placeholder.com/150',
                   onTap: () {
-                    // Sembunyikan keyboard saat navigasi
                     FocusScope.of(context).unfocus(); 
                     Navigator.push(
                       context,
@@ -203,13 +201,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                     );
                   },
-                  // *** INI ADALAH KUNCI UTAMA ***
-                  // Tidak memberikan 'onDelete' dan 'onEdit' di sini.
-                  // Karena parameternya nullable di PostCard, tidak menyediakannya
-                  // akan otomatis menjadikannya null. Ini akan mencegah
-                  // PopupMenuButton dan item menu terkait muncul di HomePage.
-                  // onDelete: null, // Tidak perlu ditulis eksplisit jika tidak ada handler
-                  // onEdit: null,   // Tidak perlu ditulis eksplisit jika tidak ada handler
                 );
               },
             );

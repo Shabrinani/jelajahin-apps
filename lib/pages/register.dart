@@ -1,8 +1,6 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:jelajahin_apps/services/firestore_service.dart'; // Import service baru
+import 'package:jelajahin_apps/services/firestore_service.dart';
 import 'package:jelajahin_apps/theme/colors.dart';
 import 'package:jelajahin_apps/pages/login.dart';
 
@@ -17,9 +15,9 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   // --- STATE & CONTROLLERS ---
-  final FirestoreService _firestoreService = FirestoreService(); // Instance service
+  final FirestoreService _firestoreService = FirestoreService();
   final TextEditingController nameController = TextEditingController();
-  final TextEditingController usernameController = TextEditingController(); // This will be used as email
+  final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController retypePasswordController = TextEditingController();
 
@@ -72,7 +70,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   void register() async {
     final name = nameController.text.trim();
-    final email = usernameController.text.trim(); // Changed variable name for clarity
+    final email = usernameController.text.trim();
     final password = passwordController.text;
     final retypePassword = retypePasswordController.text;
 

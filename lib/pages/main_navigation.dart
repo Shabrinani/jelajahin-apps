@@ -1,38 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:jelajahin_apps/theme/colors.dart'; // <-- Mengimpor AppColors dari sumber yang benar
-
-// Import CustomBottomNavBar
+import 'package:jelajahin_apps/theme/colors.dart';
 import 'package:jelajahin_apps/pages/bottom_nav_bar.dart';
-
-// Import semua halaman konten yang akan ditampilkan
 import 'package:jelajahin_apps/pages/home_page.dart';
 import 'package:jelajahin_apps/pages/saved_page.dart';
 import 'package:jelajahin_apps/pages/notification_page.dart';
 import 'package:jelajahin_apps/pages/add_destination.dart';
 import 'package:jelajahin_apps/pages/profile_page.dart';
 
-// Nama kelas diubah dari Home menjadi MainNavigation
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
   @override
-  // State class juga diubah namanya
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
-// State class juga diubah namanya
 class _MainNavigationState extends State<MainNavigation> {
-  int _selectedIndex = 0; // Index tab yang sedang aktif
-  late PageController _pageController; // Controller untuk PageView
+  int _selectedIndex = 0;
+  late PageController _pageController;
 
-  // Daftar halaman yang akan ditampilkan di PageView
-  // Catatan: Saya mengubah HomeContentPage() menjadi HomePage() agar sesuai dengan nama kelas di file home_page.dart
   final List<Widget> _pages = [
-    const HomePage(),           // Konten Home
-    const SavedPage(),          // Konten Saved
-    const AddDestinationScreen(), // Halaman ini tidak ditampilkan langsung di PageView, tapi ada di daftar untuk referensi.
-    const NotificationPage(),   // Konten Notification
-    const ProfilePage(),        // Konten Profile
+    const HomePage(),          
+    const SavedPage(),
+    const AddDestinationScreen(),
+    const NotificationPage(),
+    const ProfilePage(),
   ];
 
   @override
@@ -47,24 +38,19 @@ class _MainNavigationState extends State<MainNavigation> {
     super.dispose();
   }
 
-  // Fungsi yang dijalankan saat item di navigasi bawah ditekan
   void _onItemTapped(int index) {
-    // Logika khusus untuk tombol "Add Destination" (index 2)
-    // yang akan menampilkan halaman sebagai modal dari bawah (bottom sheet)
     if (index == 2) {
       showModalBottomSheet(
         context: context,
-        isScrollControlled: true, // Agar modal bisa full-screen jika kontennya panjang
+        isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (context) {
-          return const AddDestinationScreen(); // Menampilkan halaman AddDestinationScreen sebagai modal
+          return const AddDestinationScreen();
         },
       );
-      // Keluar dari fungsi agar tidak mengubah state atau halaman di PageView
       return;
     }
 
-    // Untuk tab lainnya, update state dan pindah halaman di PageView
     setState(() {
       _selectedIndex = index;
       _pageController.animateToPage(
@@ -81,9 +67,7 @@ class _MainNavigationState extends State<MainNavigation> {
       backgroundColor: AppColors.white,
       body: PageView(
         controller: _pageController,
-        // Logika untuk mengubah tab saat pengguna menggeser halaman
         onPageChanged: (index) {
-          // Index 2 (Add) dilewati karena itu adalah modal
           if (index != 2) {
             setState(() {
               _selectedIndex = index;
@@ -92,7 +76,6 @@ class _MainNavigationState extends State<MainNavigation> {
         },
         children: _pages,
       ),
-      // Menggunakan widget CustomBottomNavBar yang telah Anda buat
       bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,

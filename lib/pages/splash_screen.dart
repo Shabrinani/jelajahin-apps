@@ -1,9 +1,10 @@
-// ignore_for_file: use_build_context_synchronously
-
+// Import pustaka Flutter dan halaman login tujuan setelah splash
 import 'package:flutter/material.dart';
 import 'package:jelajahin_apps/pages/login.dart';
-import 'package:jelajahin_apps/main.dart'; // Import main.dart untuk mengakses AppColors
+import 'package:jelajahin_apps/main.dart';
 
+/// Halaman pembuka (SplashScreen) yang ditampilkan selama 3 detik.
+/// Menampilkan logo, nama aplikasi, dan tagline sebelum diarahkan ke LoginPage.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -15,6 +16,8 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Setelah 3 detik, pindah otomatis ke halaman Login
     Future.delayed(const Duration(seconds: 3), () {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -24,32 +27,31 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Akses textTheme dari tema global
     final TextTheme textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: AppColors.white, // Latar belakang putih dari AppColors
+      backgroundColor: AppColors.white, // Background putih sesuai tema aplikasi
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Pastikan Anda sudah menambahkan logo di pubspec.yaml
+            // Logo aplikasi
             Image.asset(
-              'images/logo_jelajahin.png', // Sesuaikan dengan path logo Anda
+              'images/logo_jelajahin.png',
               width: 150,
               height: 150,
             ),
             const SizedBox(height: 20),
+
+            // Judul aplikasi "Jelajahin"
             Text(
               'Jelajahin',
-              // Menggunakan salah satu gaya headline dari tema
-              // dan menimpa properti yang spesifik
               style: textTheme.headlineMedium?.copyWith(
-                color: AppColors.black, // Warna teks jadi hitam
-                fontSize: 36,          // Sesuaikan ukuran font
+                color: AppColors.black,
+                fontSize: 36,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,
-              ) ?? const TextStyle( // Fallback jika headlineMedium null
+              ) ?? const TextStyle(
                 color: AppColors.black,
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
@@ -57,15 +59,15 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const SizedBox(height: 10),
+
+            // Tagline aplikasi
             Text(
               'Temukan petualanganmu selanjutnya',
-              // Menggunakan salah satu gaya body dari tema
-              // dan menimpa properti yang spesifik
               style: textTheme.bodyLarge?.copyWith(
-                color: AppColors.primaryDark, // Warna teks dari palet Anda
-                fontSize: 16,               // Sesuaikan ukuran font
-              ) ?? const TextStyle( // Fallback jika bodyLarge null
-                color: AppColors.primaryDark,
+                color: AppColors.black,
+                fontSize: 16,
+              ) ?? const TextStyle(
+                color: AppColors.black,
                 fontSize: 16,
               ),
             ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jelajahin_apps/main.dart'; // Import AppColors
+import 'package:jelajahin_apps/main.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;

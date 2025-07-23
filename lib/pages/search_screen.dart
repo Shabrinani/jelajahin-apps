@@ -1,10 +1,7 @@
-// lib/pages/search_screen.dart
-// ignore_for_file: prefer_const_constructors, deprecated_member_use
-
 import 'package:flutter/material.dart';
-import 'package:jelajahin_apps/main.dart'; // For AppColors
+import 'package:jelajahin_apps/main.dart';
 import 'package:jelajahin_apps/pages/destination_detail_page.dart';
-import 'package:jelajahin_apps/widgets/post_card.dart'; // Import PostCard
+import 'package:jelajahin_apps/widgets/post_card.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -231,7 +228,6 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                       );
                     },
-                // onDelete tidak diteruskan, sehingga tombol delete tidak muncul
               );
             },
           ),

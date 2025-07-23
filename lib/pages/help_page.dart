@@ -1,39 +1,36 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:flutter/material.dart';
-import 'package:jelajahin_apps/main.dart'; // Import AppColors
+import 'package:jelajahin_apps/theme/colors.dart';
 
 class HelpPage extends StatelessWidget {
   const HelpPage({super.key});
 
-  // Data FAQ dibagi berdasarkan kategori
   final Map<String, List<Map<String, String>>> faqData = const {
-    'Trip App for Co-parents.': [ // Kategori 1
+    'Aplikasi Perjalanan': [
       {
-        'question': 'How do I set up my Trip App?',
-        'answer': 'To set up your Trip App, first download it from the App Store or Google Play Store. Then, follow the on-screen instructions to create your account and complete the initial setup process.',
+        'question': 'Bagaimana cara mengatur Aplikasi Perjalanan saya?',
+        'answer': 'Untuk mengatur Aplikasi Perjalanan Anda, pertama-tama unduh dari App Store atau Google Play Store. Kemudian, ikuti petunjuk di layar untuk membuat akun Anda dan menyelesaikan proses pengaturan awal.',
       },
       {
-        'question': 'How do I password protect my account?',
-        'answer': 'You can set up a strong password during registration. To change or update your password, go to the "Edit Profile" section in your Profile settings and look for the password reset option.',
+        'question': 'Bagaimana cara melindungi akun saya dengan kata sandi?',
+        'answer': 'Anda dapat mengatur kata sandi yang kuat selama pendaftaran. Untuk mengubah atau memperbarui kata sandi Anda, buka bagian "Edit Profil" di pengaturan Profil Anda dan cari opsi pengaturan ulang kata sandi.',
       },
     ],
-    'Connecting Co-parent & Creating a circle': [ // Kategori 2
+    'Menghubungkan & Membuat Lingkaran': [
       {
-        'question': 'If I\'m a third party, how do I connect?',
-        'answer': 'Third parties can be invited to a circle by an existing member. They will receive an invitation link or code to join the circle.',
+        'question': 'Jika saya pihak ketiga, bagaimana cara saya terhubung?',
+        'answer': 'Pihak ketiga dapat diundang ke dalam lingkaran oleh anggota yang sudah ada. Mereka akan menerima tautan undangan atau kode untuk bergabung dengan lingkaran tersebut.',
       },
       {
-        'question': 'How do I delete or disconnect from a member?',
-        'answer': 'To delete or disconnect from a member within a circle, navigate to the circle settings and select the option to manage members. You will find choices to remove or disconnect individuals.',
+        'question': 'Bagaimana cara menghapus atau memutuskan koneksi dari anggota?',
+        'answer': 'Untuk menghapus atau memutuskan koneksi dari anggota dalam suatu lingkaran, navigasikan ke pengaturan lingkaran dan pilih opsi untuk mengelola anggota. Anda akan menemukan pilihan untuk menghapus atau memutuskan koneksi individu.',
       },
       {
-        'question': 'How do I create my account?',
-        'answer': 'Creating an account is done through the "Sign Up" option on the Login page. You will need to provide an email and password to register.',
+        'question': 'Bagaimana cara membuat akun saya?',
+        'answer': 'Pembuatan akun dilakukan melalui opsi "Daftar" di halaman Login. Anda perlu memberikan email dan kata sandi untuk mendaftar.',
       },
       {
-        'question': 'How do I verify my account?',
-        'answer': 'Account verification typically involves confirming your email address through a link sent to you during registration. Please check your inbox and spam folder for the verification email.',
+        'question': 'Bagaimana cara memverifikasi akun saya?',
+        'answer': 'Verifikasi akun biasanya melibatkan konfirmasi alamat email Anda melalui tautan yang dikirimkan kepada Anda selama pendaftaran. Harap periksa kotak masuk dan folder spam Anda untuk email verifikasi.',
       },
     ],
   };
@@ -48,14 +45,15 @@ class HelpPage extends StatelessWidget {
         backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.primaryDark),
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryDark),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Help',
+          'Bantuan',
           style: textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.primaryDark,
+            fontSize: 20,
           ),
         ),
         centerTitle: true,
@@ -65,7 +63,6 @@ class HelpPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Loop melalui setiap kategori FAQ
             ...faqData.entries.map((entry) {
               String categoryTitle = entry.key;
               List<Map<String, String>> questions = entry.value;
@@ -73,13 +70,12 @@ class HelpPage extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Judul Kategori
                   Container(
                     margin: const EdgeInsets.only(bottom: 10, top: 20),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.grey[200], // Warna background untuk kategori
-                      borderRadius: BorderRadius.circular(10), // Sudut membulat
+                      color: AppColors.lightGrey.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       categoryTitle,
@@ -89,27 +85,34 @@ class HelpPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Daftar Pertanyaan dalam Kategori
                   ListView.builder(
                     shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(), // Agar bisa di-scroll dengan SingleChildScrollView
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: questions.length,
                     itemBuilder: (context, index) {
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 10), // Spasi antar pertanyaan
+                        margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
-                          color: Colors.grey[100], // Warna background untuk setiap pertanyaan
+                          color: AppColors.white,
                           borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              spreadRadius: 1,
+                              blurRadius: 5,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: ExpansionTile(
-                          tilePadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0), // Padding disesuaikan
+                          tilePadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
                           iconColor: AppColors.darkTeal,
                           collapsedIconColor: AppColors.darkTeal,
                           title: Text(
                             questions[index]['question']!,
                             style: textTheme.bodyLarge?.copyWith(
                               color: AppColors.primaryDark,
-                              fontWeight: FontWeight.w500, // Sedikit lebih tebal
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           children: [
@@ -119,6 +122,7 @@ class HelpPage extends StatelessWidget {
                                 questions[index]['answer']!,
                                 style: textTheme.bodyMedium?.copyWith(
                                   color: Colors.grey[800],
+                                  height: 1.5,
                                 ),
                               ),
                             ),

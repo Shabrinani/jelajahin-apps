@@ -1,13 +1,14 @@
-// ignore_for_file: use_build_context_synchronously
-
+// Import pustaka Flutter dan layanan tambahan seperti SharedPreferences dan Firebase
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:jelajahin_apps/main.dart'; // Untuk AppColors dan themeNotifier
-import 'package:jelajahin_apps/pages/notification_page.dart'; // Pastikan path sesuai
-import 'package:jelajahin_apps/pages/help_page.dart'; // Import HelpPage yang baru ditambahkan
-import 'package:firebase_auth/firebase_auth.dart'; // Untuk fungsi logout
-import 'package:jelajahin_apps/pages/login.dart'; // Untuk navigasi ke LoginPage setelah logout
+import 'package:jelajahin_apps/main.dart';
+import 'package:jelajahin_apps/pages/notification_page.dart';
+import 'package:jelajahin_apps/pages/help_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:jelajahin_apps/pages/login.dart';
 
+/// Halaman pengaturan (Settings) aplikasi.
+/// Menyediakan opsi untuk mengatur tampilan (dark mode), preferensi, akses halaman bantuan, serta logout.
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
 
@@ -16,14 +17,16 @@ class SettingPage extends StatefulWidget {
 }
 
 class _SettingPageState extends State<SettingPage> {
+  // Status dark mode (true = dark, false = light)
   bool _isDarkMode = false;
 
   @override
   void initState() {
     super.initState();
-    _loadThemePreference();
+    _loadThemePreference(); // Load preferensi tema dari local storage
   }
 
+  /// Memuat status dark mode dari SharedPreferences saat app dibuka
   Future<void> _loadThemePreference() async {
     final prefs = await SharedPreferences.getInstance();
     final darkMode = prefs.getBool('isDarkMode') ?? false;
@@ -32,10 +35,11 @@ class _SettingPageState extends State<SettingPage> {
       _isDarkMode = darkMode;
     });
 
-    // Sinkronkan dengan theme global
+    // Notifikasi tema global diubah berdasarkan preferensi
     themeNotifier.value = darkMode ? ThemeMode.dark : ThemeMode.light;
   }
 
+  /// Menyimpan perubahan dark mode ke SharedPreferences dan update tampilan
   Future<void> _toggleTheme(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isDarkMode', value);
@@ -44,9 +48,9 @@ class _SettingPageState extends State<SettingPage> {
       _isDarkMode = value;
     });
 
-    // Ubah tema global
     themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
 
+    // Feedback perubahan mode ke pengguna
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(value ? "Dark Mode Aktif" : "Light Mode Aktif"),
@@ -55,12 +59,11 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
-  // Fungsi logout yang dipindahkan/direplikasi ke SettingPage
+  /// Fungsi logout akun dari Firebase dan kembali ke halaman login
   Future<void> _logout() async {
     try {
       await FirebaseAuth.instance.signOut();
       if (mounted) {
-        // Hapus semua rute dan navigasi ke LoginPage
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -99,9 +102,12 @@ class _SettingPageState extends State<SettingPage> {
         ),
         centerTitle: true,
       ),
+
+      // Isi halaman ditampilkan dalam ListView agar scrollable
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         children: [
+          // === Bagian Tampilan ===
           _buildSectionTitle("Tampilan"),
           _buildSwitchTile(
             icon: Icons.dark_mode,
@@ -111,6 +117,7 @@ class _SettingPageState extends State<SettingPage> {
           ),
           const Divider(height: 1),
 
+          // === Bagian Preferensi ===
           _buildSectionTitle("Preferensi"),
           _buildNavigationTile(
             icon: Icons.language,
@@ -142,18 +149,20 @@ class _SettingPageState extends State<SettingPage> {
             },
           ),
 
-          _buildSectionTitle("Bantuan & Dukungan"), // Section baru untuk Bantuan
+          // === Bantuan dan Dukungan ===
+          _buildSectionTitle("Bantuan & Dukungan"),
           _buildNavigationTile(
             icon: Icons.help_outline,
             title: "Bantuan",
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const HelpPage()), // Navigasi ke HelpPage
+                MaterialPageRoute(builder: (_) => const HelpPage()),
               );
             },
           ),
 
+          // === Tentang Aplikasi ===
           _buildSectionTitle("Tentang"),
           _buildNavigationTile(
             icon: Icons.info_outline,
@@ -167,22 +176,21 @@ class _SettingPageState extends State<SettingPage> {
               );
             },
           ),
-          
-          // Opsi Logout di bagian paling bawah
-          const SizedBox(height: 30), // Memberi jarak dari section di atasnya
+
+          const SizedBox(height: 30),
+
+          // === Logout ===
           _buildNavigationTile(
             icon: Icons.logout,
             title: "Log Out",
             onTap: _logout,
-            // Anda bisa tambahkan warna merah jika diinginkan, tapi defaultnya sudah cukup jelas
-            // trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.red), // Contoh
-            // iconColor: Colors.red, // Ini membutuhkan penyesuaian di _buildNavigationTile jika ingin passing color
           ),
         ],
       ),
     );
   }
 
+  /// Widget untuk menampilkan judul bagian (section)
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -196,6 +204,7 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
+  /// Widget untuk switch pengaturan, seperti Dark Mode
   Widget _buildSwitchTile({
     required IconData icon,
     required String title,
@@ -215,23 +224,20 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
+  /// Widget untuk menampilkan opsi navigasi seperti Bantuan, Notifikasi, dsb.
   Widget _buildNavigationTile({
     required IconData icon,
     required String title,
     String? subtitle,
     required VoidCallback onTap,
-    // Tambahkan parameter iconColor jika ingin bisa custom warna ikon untuk logout
-    // Color? iconColor,
   }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary), // Gunakan iconColor jika ditambahkan
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(
         title,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w500,
-              // Jika ingin teks logout merah:
-              // color: title == "Log Out" ? Colors.red : null,
             ),
       ),
       subtitle: subtitle != null ? Text(subtitle) : null,
@@ -240,4 +246,3 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 }
-
